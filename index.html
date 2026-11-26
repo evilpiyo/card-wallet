@@ -167,8 +167,69 @@
     @keyframes bump { from { background: rgba(74,222,128,.25); } }
     .sheet-row { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
 
-    /* 結帳條碼 */
-    .co-barcode { width: 100%; height: auto; display: block; }
+    /* 付款：固定白底黑條碼，不套用 Theme */
+    .payview { position: fixed; top: 0; left: 0; right: 0; height: 100%; height: 100dvh; z-index: 40; max-width: 28rem; margin: 0 auto; display: flex; flex-direction: column; background: #fff; color: #111; --text: #111; --surface: #fff; --bg: #f3f2ee; --line: #e6e2d9; --muted: #6f6c65; --action: #1f6f54; --on-action: #fff; --danger: #c0271c; }
+    .pay-head { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; }
+    .pay-head button { min-width: 44px; height: 40px; background: none; border: 0; color: inherit; font-size: 16px; }
+    .pay-mid { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; touch-action: pan-y; }
+    .pay-foot { flex: none; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
+    .pay-foot .btn { height: 52px; font-size: 18px; }
+    .amount-box { display: flex; flex: none; flex-direction: column; align-items: center; width: 100%; padding: 4px; background: none; border: 2px solid transparent; border-radius: 14px; color: inherit; }
+    .amount-box[aria-pressed="true"] { border-color: var(--action); }
+    .pay-hintline { flex: none; min-height: 30px; text-align: center; font-size: 14px; color: var(--muted); }
+    .pay-hintline.short { color: var(--danger); }
+    .amt { font-size: 22px; font-weight: 800; color: var(--action); padding: 0 2px; }
+    .short .amt { color: var(--danger); }
+    .keys { display: grid; flex: none; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 4px; }
+    .keys button { background: var(--bg); border: 0; border-radius: 12px; padding: 10px; font-size: 22px; font-weight: 700; color: inherit; touch-action: manipulation; }
+    .compact .keys { gap: 6px; }
+    .compact .keys button { padding: 6px; font-size: 20px; }
+    .sum { display: grid; flex: none; grid-template-columns: repeat(3, 1fr); text-align: center; border-bottom: 1px solid #eee; padding: 0 0 6px; }
+    .sum b { display: block; font-size: 22px; line-height: 1.2; }
+    .codes { flex: none; min-height: 190px; margin: auto 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; user-select: none; }
+    .codes svg { width: 300px; max-width: 96%; height: auto; display: block; }
+    .codes .seg { width: 300px; max-width: 96%; font-size: 12px; font-weight: 700; }
+    .codes .seg.second { margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 8px; }
+    .codes img { max-width: 96%; max-height: 220px; border-radius: 6px; }
+    .pay-mid .link { flex: none; align-self: center; }
+    .tray { display: flex; flex: none; gap: 8px; overflow-x: auto; padding: 6px 12px 2px; border-top: 1px solid #eee; }
+    .chipcard { flex: none; width: 50px; padding: 0; background: none; border: 0; color: inherit; text-align: center; font-size: 11px; }
+    .chipcard .mini { width: 34px; margin: 0 auto 2px; border: 3px solid transparent; color: #222; }
+    .chipcard.current { font-weight: 700; }
+    .chipcard.current .mini { border-color: #000; }
+    .chipcard.done .mini::after { content: "✓"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #15803d; border: 2px solid #fff; color: #fff; font-size: 13px; font-weight: 800; }
+    .paybtn { position: relative; overflow: hidden; width: 100%; height: 56px; border-radius: 16px; font-size: 19px; font-weight: 800; background: rgba(31,111,84,.14); border: 2px solid var(--action); color: var(--action); transition: color .3s; }
+    .paybtn::before { content: ""; position: absolute; inset: 0; background: var(--action); transform: scaleX(0); transform-origin: left; transition: transform .4s ease-out; }
+    .paybtn.filling::before, .paybtn:disabled::before { transform: scaleX(1); }
+    .paybtn.filling, .paybtn:disabled { color: #fff; }
+    .paybtn.go { background: var(--action); color: #fff; }
+    .paybtn span { position: relative; }
+    .pay-cover { position: absolute; inset: 0; z-index: 5; }
+    .stamp { position: absolute; left: 50%; top: 50%; width: 136px; height: 136px; border-radius: 50%; border: 7px double #c0271c; color: #c0271c; background: rgba(255,255,255,.9); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; transform: translate(-50%, -50%) rotate(-12deg); animation: slam .28s .22s cubic-bezier(.5,0,.8,.5) both; }
+    .stamp b { font-size: 36px; letter-spacing: 4px; }
+    .stamp small { font-size: 14px; }
+    @keyframes slam { from { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(2.4); } }
+    .confirm-row { display: flex; flex: none; align-items: center; gap: 6px; padding: 5px 8px; margin-bottom: 6px; border-left: 6px solid var(--tone); border-radius: 12px; background: color-mix(in srgb, var(--tone) 11%, #fff); }
+    .confirm-row .mini { width: 28px; }
+    .confirm-row .after { width: 66px; height: 44px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-size: 22px; font-weight: 800; }
+    /* 矮畫面（扣掉網址列）：縮間距，讓兩段條碼與「看原圖」不必捲動 */
+    @media (max-height: 660px) {
+      .pay-head button { height: 34px; }
+      .sum { padding-bottom: 2px; }
+      .sum b { font-size: 19px; }
+      .sum .muted { font-size: 12px; }
+      .codes { min-height: 0; gap: 2px; }
+      .codes .seg.second { margin-top: 4px; padding-top: 3px; }
+      .codes img { max-height: 170px; }
+      .pay-mid .link { padding: 2px; }
+      .pay-mid .row { padding-top: 2px !important; padding-bottom: 2px !important; }
+      .pay-mid .mini { width: 28px; }
+      .tray { padding-top: 4px; }
+      .tray .mini { width: 26px; }
+      .paybtn { height: 46px; font-size: 17px; }
+      .pay-foot { padding-top: 4px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+    }
+    @media (prefers-reduced-motion: reduce) { .stamp { animation: none; } .paybtn, .paybtn::before { transition: none; } }
   </style>
 </head>
 <body class="font-sans select-none">
@@ -187,6 +248,7 @@
         <p class="total" id="total-balance">$0</p>
       </div>
       <div class="cards" id="denominations"></div>
+      <button type="button" class="home-check" id="home-pending" onclick="openPay()" hidden>有一筆付款尚未完成</button>
       <button type="button" class="home-check" id="home-check" onclick="openCards()" hidden></button>
       <div class="home-empty" id="home-empty" hidden></div>
       <button class="quote" id="quote" onclick="nextQuote()" title="點一下換一句"></button>
@@ -204,7 +266,7 @@
 
     <p class="muted text-center" id="pay-hint" hidden>目前沒有可付款的卡片</p>
     <div class="page-bar">
-      <button class="btn btn-primary pay" id="btn-pay" onclick="openCheckout()">付款</button>
+      <button class="btn btn-primary pay" id="btn-pay" onclick="openPay()">付款</button>
       <button class="btn set" onclick="showPage('view-settings')">設定</button>
     </div>
   </main>
@@ -297,62 +359,17 @@
   <!-- 解碼用離屏容器：函式庫依容器尺寸縮放圖片 -->
   <div id="decode-area" aria-hidden="true" style="position:fixed;left:-10000px;top:0;width:1600px;height:400px;overflow:hidden"></div>
 
-  <!-- 結帳：固定白底黑條碼，不套用 Theme -->
-  <div id="view-checkout" class="hidden fixed inset-0 bg-white text-black z-40 flex flex-col justify-between">
-    <div>
-      <div class="bg-red-600 text-white text-center py-2 px-4 text-xs font-bold tracking-wider">
-        ⚠️ 結帳前請手動將手機螢幕亮度調至 100%
-      </div>
-      <div class="p-4 flex justify-between items-center border-b">
-        <button onclick="closeCheckout()" class="text-gray-600 font-bold px-2 py-1">✕ 結束結帳</button>
-        <div class="text-center">
-          <span class="text-xs text-gray-500 block">本輪已核銷</span>
-          <span class="font-bold text-emerald-700" id="checkout-session-total">$0 (0張)</span>
-        </div>
-        <span class="text-sm font-bold bg-gray-100 px-3 py-1 rounded-full" id="checkout-progress">1 / 1</span>
-      </div>
-    </div>
-
-    <div id="checkout-card-area" class="flex-1 min-h-0 overflow-y-auto">
-      <div class="min-h-full flex flex-col items-center justify-center px-4 py-2 text-center">
-        <div>
-          <span class="text-sm text-gray-500">本張餘額</span>
-          <h2 class="text-3xl font-black text-black" id="co-balance">$100</h2>
-        </div>
-
-        <div class="my-2 w-full max-w-sm bg-white py-2 px-1 flex flex-col items-center justify-center min-h-[180px]">
-          <!-- 兩段同時顯示，順序同實體卡；間距拉大，降低掃描槍讀錯段 -->
-          <div id="co-barcodes" class="w-full">
-            <p class="text-left text-sm font-bold">① 第一段</p>
-            <svg id="co-barcode-svg" class="co-barcode"></svg>
-            <p class="text-left text-sm font-bold mt-6 border-t border-dashed pt-3">② 第二段</p>
-            <svg id="co-barcode2-svg" class="co-barcode"></svg>
-          </div>
-          <img id="co-crop-img" class="hidden max-h-[240px] w-full object-contain rounded" alt="卡片原圖">
-        </div>
-
-        <button onclick="toggleBarcodeImage()" id="btn-toggle-img" class="text-xs text-blue-600 underline">
-          刷不過？切換顯示實體卡片裁切原圖
-        </button>
-      </div>
-    </div>
-
-    <div class="p-4 bg-gray-50 border-t grid grid-cols-3 gap-3">
-      <button onclick="prevCheckoutCard()" class="py-3.5 rounded-xl bg-gray-200 font-bold text-gray-700 active:bg-gray-300">
-        ← 上一張
-      </button>
-      <button onclick="markUsedAndNext()" id="btn-mark-used" class="col-span-2 py-3.5 rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-lg active:bg-emerald-700 disabled:opacity-50">
-        ✓ 已刷完 (歸零並下一張)
-      </button>
-    </div>
-  </div>
+  <!-- 付款：內容由 JS 產生 -->
+  <div id="view-pay" class="payview" hidden></div>
 
   <script>
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
+    const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
     const FACE_VALUES = [35, 50, 100, 200, 500, 1000];
     let db;
     let allCards = [];
+    let payment = null;
     let cardTab = 'active';
     let cardFace = 0;      // 0＝全部
     let showNumbers = false;
@@ -369,15 +386,22 @@
 
     function initDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
+        const request = indexedDB.open(DB_NAME, 2);
+        // 版本 2 只新增 payment，不動既有卡片
         request.onupgradeneeded = (e) => {
-          db = e.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          const next = e.target.result;
+          for (const name of [STORE_NAME, PAY_STORE]) {
+            if (!next.objectStoreNames.contains(name)) next.createObjectStore(name, { keyPath: 'id' });
           }
         };
+        request.onblocked = () => alert('請關閉其他開著本 app 的分頁，才能完成更新。');
         request.onsuccess = (e) => {
           db = e.target.result;
+          db.onversionchange = () => {
+            db.close();
+            db = null;
+            alert('app 已更新，請重新整理此頁面。');
+          };
           loadCards().then(resolve);
         };
         request.onerror = (e) => reject(e);
@@ -386,11 +410,12 @@
 
     function loadCards() {
       return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.getAll();
-        req.onsuccess = () => {
-          allCards = req.result.sort((a, b) => b.createdAt - a.createdAt);
+        const tx = db.transaction([STORE_NAME, PAY_STORE], 'readonly');
+        const cards = tx.objectStore(STORE_NAME).getAll();
+        const record = tx.objectStore(PAY_STORE).get('current');
+        tx.oncomplete = () => {
+          allCards = cards.result.sort((a, b) => b.createdAt - a.createdAt);
+          payment = record.result || null;
           render();
           resolve();
         };
@@ -506,7 +531,9 @@
       const cards = payableCards();
       const sumOf = list => list.reduce((sum, c) => sum + Number(c.balance), 0);
       $('total-balance').textContent = `$${sumOf(cards).toLocaleString()}`;
-      $('btn-pay').disabled = cards.length === 0;
+      $('btn-pay').disabled = cards.length === 0 && !payment;
+      $('btn-pay').textContent = payment ? '繼續付款' : '付款';
+      $('home-pending').hidden = !payment;
       const toCheck = activeCards().filter(c => c.needsCheck).length;
       $('home-check').hidden = toCheck === 0;
       $('home-check').textContent = `${toCheck} 張待核對，未計入`;
@@ -520,7 +547,7 @@
       const box = $('home-empty');
       box.hidden = payableCount > 0;
       // 第三種狀態本身已說明原因，不再重複提示
-      $('pay-hint').hidden = payableCount > 0 || (allCards.length > 0 && activeCards().length > 0);
+      $('pay-hint').hidden = Boolean(payment) || payableCount > 0 || (allCards.length > 0 && activeCards().length > 0);
       if (payableCount > 0) return box.replaceChildren();
 
       const title = document.createElement('p');
@@ -585,6 +612,8 @@
       return text.length === 16 ? `**** **** ${text.slice(8, 12)} ${text.slice(12)}` : `**** ${text.slice(-4)}`;
     };
     const findCard = id => allCards.find(c => c.id === id);
+    const isLocked = id => Boolean(payment?.items.some(i => i.cardId === id));
+    const LOCKED_HINT = '這張卡在未完成的付款中，請先完成或放棄付款';
     const isUsed = card => !(card.status === 'active' && card.balance > 0);
 
     function faceImage(value) {
@@ -654,6 +683,7 @@
               <div class="num">${escapeHTML(showNumbers ? fullNo(card.barcode) : maskedNo(card.barcode))}</div>
               <b class="text-xl">${escapeHTML(money(card.balance))}</b>
               ${card.needsCheck ? '<span class="badge">待核對</span>' : ''}
+              ${isLocked(card.id) ? '<span class="badge">付款中</span>' : ''}
               ${isComplete(card) ? '' : '<div class="text-xs" style="color:var(--danger)">缺第②段，請刪除後重掃</div>'}
             </div>
             <button type="button" class="editbtn" data-edit="${escapeHTML(card.id)}">改餘額</button>
@@ -764,6 +794,7 @@
     function askFaceChange(id) {
       const card = findCard(id);
       if (!card) return;
+      if (isLocked(id)) return toast(LOCKED_HINT);
       openSheet(`<b>改面額</b><p class="muted">${escapeHTML(maskedNo(card.barcode))}・目前 $${escapeHTML(card.initialAmount)}。未使用的卡，餘額跟著改；用過的卡保留餘額（不超過新面額）。</p>
         <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}" aria-pressed="${v === Number(card.initialAmount)}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>
         <button type="button" class="btn" data-act="cancel">取消</button>`, () => viewPhoto(id));
@@ -797,6 +828,7 @@
     function editBalance(id) {
       const card = findCard(id);
       if (!card) return;
+      if (isLocked(id)) return toast(LOCKED_HINT);
       const face = Number(card.initialAmount);
       const fill = value => `${Math.max(0, Math.min(100, face ? 100 - value / face * 100 : 100))}%`;
       openSheet(`<div class="row justify-between"><b>改餘額</b><span class="num">${escapeHTML(maskedNo(card.barcode))}</span></div>
@@ -839,6 +871,7 @@
     function askDelete(id) {
       const card = findCard(id);
       if (!card) return;
+      if (isLocked(id)) { renderCardList(); return toast(LOCKED_HINT); }
       const cancel = () => { closeSheet(); renderCardList(); };
       openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div>餘額 ${escapeHTML(money(card.balance))}</div></div>
         <p class="muted">餘額紀錄會一起刪除，無法復原。</p>
@@ -1542,116 +1575,492 @@
       return count >= 2 ? value : null;
     }
 
-    // ===== 結帳 =====
-    let checkoutQueue = [];
-    let checkoutIndex = 0;
-    let sessionUsedAmount = 0;
-    let sessionUsedCount = 0;
-    let wakeLock = null;
-    let showingRawImage = false;
-    let checkoutBusy = false;
-    const MARK_COOLDOWN_MS = 600; // 換卡後短暫鎖定，避免連點核銷到下一張
+    // ===== 付款：資料 =====
+    // payment store 只有一筆 current，只存卡片 id 與金額。所有寫入都在 transaction 內重讀後再改。
+    const gone = () => Object.assign(new Error('這筆付款已在別處結束'), { gone: true });
+    const doneItems = record => record.items.filter(i => i.done).sort((a, b) => a.order - b.order);
+    const paidByCards = record => record.items.reduce((sum, i) => sum + (i.done ? i.use : 0), 0);
+    const remaining = record => record.bill - record.other - paidByCards(record);
 
-    function setCheckoutBusy(busy) {
-      checkoutBusy = busy;
-      $('btn-mark-used').disabled = busy;
+    // 依餘額由少到多（同額舊的先）配到足額
+    function allocate(list, need, exclude = []) {
+      const items = [];
+      const pool = list.filter(c => c.status === 'active' && c.balance > 0 && isComplete(c) && !c.needsCheck && !exclude.includes(c.id))
+        .sort((a, b) => a.balance - b.balance || a.createdAt - b.createdAt);
+      for (const card of pool) {
+        if (need <= 0) break;
+        const use = Math.min(card.balance, need);
+        items.push({ cardId: card.id, use, before: card.balance, done: false, order: 0 });
+        need -= use;
+      }
+      return { items, short: Math.max(0, need) };
     }
 
-    async function openCheckout() {
-      checkoutQueue = payableCards();
-      if (checkoutQueue.length === 0) {
-        alert('目前沒有可用的商品卡喔！');
-        return;
-      }
-      checkoutIndex = 0;
-      sessionUsedAmount = 0;
-      sessionUsedCount = 0;
-      setCheckoutBusy(false);
-      $('view-checkout').classList.remove('hidden');
-      renderCheckoutCard();
+    // cards 與 payment 同一個 transaction；action 丟例外就整筆不寫
+    function payTx(action) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME, PAY_STORE], 'readwrite');
+        const cards = tx.objectStore(STORE_NAME), store = tx.objectStore(PAY_STORE);
+        let failure = null;
+        const all = cards.getAll(), current = store.get('current');
+        current.onsuccess = () => {
+          try {
+            action({ record: current.result || null, list: all.result, cards, store });
+          } catch (e) {
+            failure = e;
+            tx.abort();
+          }
+        };
+        tx.oncomplete = () => loadCards().then(resolve);
+        tx.onabort = () => { loadCards(); reject(failure || tx.error); };
+      });
+    }
 
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await navigator.wakeLock.request('screen');
+    // 只改本次付款紀錄
+    function updatePayment(sessionId, mutate) {
+      return payTx(({ record, list, store }) => {
+        if (!record || record.sessionId !== sessionId) throw gone();
+        mutate(record, list);
+        record.updatedAt = Date.now();
+        store.put(record);
+      });
+    }
+
+    // 確認頁每按一個鍵就存，只讀寫 payment（不必重讀含照片的卡片）
+    function saveEdit(sessionId, cardId, value) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(PAY_STORE, 'readwrite');
+        const store = tx.objectStore(PAY_STORE);
+        const request = store.get('current');
+        request.onsuccess = () => {
+          const record = request.result;
+          if (!record || record.sessionId !== sessionId) return;
+          record.edits[cardId] = value;
+          record.updatedAt = Date.now();
+          store.put(record);
+          payment = record;
+        };
+        tx.oncomplete = resolve;
+        tx.onabort = () => reject(tx.error);
+      });
+    }
+
+    function createPayment(bill, other) {
+      const sessionId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      return payTx(({ record, list, store }) => {
+        if (record) throw Object.assign(new Error('有一筆付款尚未完成'), { exists: true });
+        const plan = allocate(list, bill - other);
+        if (plan.short || !plan.items.length) throw new Error('可付款的餘額已改變，請重新確認');
+        store.add({ id: 'current', sessionId, stage: 'swipe', bill, other, items: plan.items, edits: {}, updatedAt: Date.now() });
+      }).then(() => sessionId);
+    }
+
+    function markDone(sessionId, cardId) {
+      return updatePayment(sessionId, record => {
+        const item = record.items.find(i => i.cardId === cardId);
+        if (!item) throw new Error('這張卡不在本次付款中');
+        if (!item.done) {
+          item.done = true;
+          item.order = Math.max(0, ...record.items.map(i => i.order)) + 1;
         }
-      } catch (err) {}
+        if (remaining(record) <= 0) record.stage = 'confirm';
+      });
     }
 
-    function closeCheckout() {
-      $('view-checkout').classList.add('hidden');
-      if (wakeLock) {
-        wakeLock.release().then(() => wakeLock = null);
+    // 撤銷：保留其他已刷結果，只重配未刷的卡
+    function undoDone(sessionId, cardId) {
+      return updatePayment(sessionId, (record, list) => {
+        const done = doneItems(record).filter(i => i.cardId !== cardId);
+        const need = record.bill - record.other - done.reduce((sum, i) => sum + i.use, 0);
+        record.items = [...done, ...allocate(list, need, done.map(i => i.cardId)).items];
+        record.stage = 'swipe';
+        delete record.edits[cardId];
+      });
+    }
+
+    function setStage(sessionId, stage) {
+      return updatePayment(sessionId, record => { record.stage = stage; });
+    }
+
+    // 放棄：已刷的卡門市可能已扣款，標為待核對
+    function abandonPayment(sessionId) {
+      return payTx(({ record, list, cards, store }) => {
+        if (!record || record.sessionId !== sessionId) throw gone();
+        for (const item of doneItems(record)) {
+          const card = list.find(c => c.id === item.cardId);
+          if (card) cards.put({ ...card, needsCheck: true });
+        }
+        store.delete('current');
+      });
+    }
+
+    // 確認：寫入各卡餘額並刪除紀錄，全部成功或全部不寫
+    function finalizePayment(sessionId, values) {
+      return payTx(({ record, list, cards, store }) => {
+        if (!record || record.sessionId !== sessionId) throw gone();
+        for (const item of doneItems(record)) {
+          const card = list.find(c => c.id === item.cardId);
+          if (!card || card.balance !== item.before) throw new Error('卡片餘額和付款開始時不同，沒有寫入。請返回後放棄紀錄，再逐張核對。');
+          const value = values[item.cardId];
+          if (!Number.isInteger(value) || value < 0 || value > card.initialAmount) throw new Error('剩餘金額需為 0 到面額之間');
+          applyChange(card, 'pay', value);
+          cards.put(card);
+        }
+        store.delete('current');
+      });
+    }
+
+    // ===== 付款：畫面 =====
+    const STAMP_MS = 900;
+    const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '清除', '0', '⌫'];
+    let pay = null; // { screen: 'amount'|'swipe'|'confirm', sessionId, bill, other, typing, at, raw, whole, busy, row, fresh, values }
+    let wakeLock = null;
+
+    const keypad = () => `<div class="keys">${KEYS.map(k => `<button type="button" data-key="${k}">${k}</button>`).join('')}</div>`;
+    const bindKeys = handler => $('view-pay').querySelectorAll('[data-key]').forEach(btn => btn.onclick = () => handler(btn.dataset.key));
+    const payCard = item => findCard(item.cardId) || { barcode: '', barcode2: '', initialAmount: 0, balance: item.before, cropImage: null };
+
+    async function keepAwake() {
+      try {
+        if ('wakeLock' in navigator && (!wakeLock || wakeLock.released)) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (e) {}
+    }
+
+    async function openPay() {
+      await loadCards();
+      if (!payment && !payableCards().length) return toast('目前沒有可付款的卡片');
+      $('view-pay').hidden = false;
+      keepAwake();
+      if (payment) return resumePay();
+      pay = { screen: 'amount', bill: '', other: '0', typing: 'bill' };
+      renderAmount();
+    }
+
+    function resumePay() {
+      const at = Math.max(0, payment.items.findIndex(i => !i.done));
+      pay = { screen: payment.stage, sessionId: payment.sessionId, at, raw: false, whole: false, busy: false };
+      if (payment.stage === 'confirm') startConfirm();
+      else renderPay();
+    }
+
+    function closePay() {
+      closeSheet();
+      $('view-pay').hidden = true;
+      $('view-pay').replaceChildren();
+      pay = null;
+      wakeLock?.release().catch(() => {});
+      wakeLock = null;
+    }
+
+    // 寫入失敗：停在原畫面；紀錄已不存在就離開付款
+    function payFailed(error) {
+      if (pay) pay.busy = false;
+      if (error?.gone) { closePay(); return toast(error.message); }
+      toast('儲存失敗，請再試一次');
+    }
+
+    // 回到前景或另一個分頁改過紀錄後，重畫目前步驟
+    function syncPay() {
+      if (!pay || pay.busy || pay.screen === 'amount') return;
+      if (!payment || payment.sessionId !== pay.sessionId) { closePay(); return toast('這筆付款已在別處結束'); }
+      if (!$('shade').hidden) return;
+      if (payment.stage !== pay.screen) return resumePay();
+      // 同一步驟：保留正在看的卡（或列），避免在櫃台解鎖後跳到別張
+      if (pay.screen === 'swipe') return renderPay();
+      const { row, fresh } = pay;
+      startConfirm();
+      pay.row = Math.min(row, pay.row);
+      pay.fresh = fresh;
+      renderConfirm();
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || !pay) return;
+      keepAwake();
+      if (db) loadCards().then(syncPay);
+    });
+
+    // ----- 輸入金額 -----
+    function renderAmount() {
+      const bill = Number(pay.bill), other = Number(pay.other), need = bill - other;
+      const plan = need > 0 ? allocate(allCards, need) : null;
+      const ready = Boolean(plan && !plan.short);
+      const hint = !bill ? '輸入這次應付金額' : need < 0 ? '其他付款超過應付金額' : need === 0 ? '不需要使用商品卡'
+        : plan.short ? `商品卡還差 <b class="amt">${money(plan.short)}</b>，請增加其他付款`
+        : `商品卡支付 <b class="amt">${money(need)}</b>・用 <b class="amt">${plan.items.length}</b> 張`;
+      const box = (key, label, value, size) => `<button type="button" class="amount-box" data-box="${key}" aria-pressed="${pay.typing === key}">
+        <span class="muted">${label}</span><b style="font-size:${size}px">${money(value || 0)}</b></button>`;
+      $('view-pay').innerHTML = `<div class="pay-head"><button type="button" data-act="exit" aria-label="返回首頁">✕</button><b>付款</b><span class="w-11"></span></div>
+        <div class="pay-mid" style="padding:0 16px;gap:8px">
+          ${box('bill', '應付金額', pay.bill, 44)}${box('other', '其他付款（現金等）', pay.other, 22)}
+          <p class="pay-hintline ${plan?.short || need < 0 ? 'short' : ''}" id="amount-hint">${hint}</p>
+          <div style="margin-top:auto">${keypad()}</div>
+        </div>
+        <div class="pay-foot"><button type="button" class="btn btn-primary w-full" data-act="start" ${ready ? '' : 'disabled'}>開始付款</button></div>`;
+      const view = $('view-pay');
+      view.querySelector('[data-act="exit"]').onclick = closePay;
+      view.querySelectorAll('[data-box]').forEach(btn => btn.onclick = () => { pay.typing = btn.dataset.box; renderAmount(); });
+      view.querySelector('[data-act="start"]').onclick = beginPay;
+      bindKeys(key => {
+        const old = pay[pay.typing];
+        const next = key === '⌫' ? old.slice(0, -1) : key === '清除' ? '' : (old + key).replace(/^0+(?=\d)/, '').slice(0, 5);
+        pay[pay.typing] = pay.typing === 'other' && !next ? '0' : next;
+        renderAmount();
+      });
+    }
+
+    function beginPay() {
+      if (pay.busy) return;
+      pay.busy = true;
+      createPayment(Number(pay.bill), Number(pay.other)).then(resumePay).catch(error => {
+        if (error.exists) return resumePay();
+        pay.busy = false;
+        toast(error.message || '儲存失敗，請再試一次');
+        renderAmount();
+      });
+    }
+
+    // ----- 逐張刷卡 -----
+    function renderPay() {
+      pay.screen = 'swipe';
+      pay.at = Math.min(pay.at, payment.items.length - 1);
+      const item = payment.items[pay.at], card = payCard(item);
+      const paid = payment.other + paidByCards(payment), left = remaining(payment);
+      const finished = left <= 0;
+      const label = finished ? '前往確認餘額' : item.done ? '✓ 已刷過，請勿重刷' : '已刷，下一張';
+      $('view-pay').innerHTML = `<div class="pay-head"><button type="button" data-act="abort" aria-label="結束付款">✕</button><b>${pay.at + 1} / ${payment.items.length}</b>
+          <button type="button" data-act="light" aria-label="亮度提醒">☀</button></div>
+        <div class="sum"><div><span class="muted">應付</span><b>${money(payment.bill)}</b></div><div><span class="muted">已付</span><b style="color:#15803d">${money(paid)}</b></div>
+          <div><span class="muted">尚需</span><b style="color:${payment.bill - paid > 0 ? '#b91c1c' : '#15803d'}">${money(Math.max(0, payment.bill - paid))}</b></div></div>
+        ${payment.other ? `<p class="muted text-center" style="flex:none">已付含其他付款 ${money(payment.other)}</p>` : ''}
+        <div class="pay-mid" id="pay-swipe">
+          <div class="row ${faceClass(card.initialAmount)}" style="padding:6px 16px">${miniCard(card.initialAmount)}<span class="num flex-1">${escapeHTML(fullNo(card.barcode))}</span>
+            <div style="text-align:right"><span class="muted">${item.done ? '已扣' : '本張扣'}</span><br><b style="font-size:26px">${money(item.use)}</b></div></div>
+          <div class="codes">${pay.raw ? rawMarkup(card) : '<span class="seg">① 第一段</span><svg id="bc1"></svg><span class="seg second">② 第二段</span><svg id="bc2"></svg>'}</div>
+          <button type="button" class="link" data-act="raw">${pay.raw ? '返回條碼' : '刷不過？看原圖'}</button>
+        </div>
+        <div class="tray">${payment.items.map((it, i) => `<button type="button" class="chipcard ${it.done ? 'done' : ''} ${i === pay.at ? 'current' : ''}" data-chip="${i}" aria-label="第 ${i + 1} 張，${it.done ? '已刷' : '未刷'}，扣 ${it.use}">
+          ${miniCard(payCard(it).initialAmount)}${it.done ? '-' : ''}${money(it.use)}</button>`).join('')}</div>
+        <div class="pay-foot"><button type="button" class="paybtn ${finished ? 'go' : ''}" id="pay-btn" ${item.done && !finished ? 'disabled' : ''}><span>${label}</span></button></div>`;
+
+      const view = $('view-pay');
+      view.querySelector('[data-act="abort"]').onclick = abortPay;
+      view.querySelector('[data-act="light"]').onclick = () => toast('請把螢幕亮度調到最亮');
+      view.querySelector('[data-act="raw"]').onclick = () => { pay.raw = !pay.raw; pay.whole = false; renderPay(); };
+      view.querySelectorAll('[data-chip]').forEach(btn => btn.onclick = () => tapChip(Number(btn.dataset.chip)));
+      $('pay-btn').onclick = () => finished ? goConfirm() : markPaid();
+      if (pay.raw) showRaw(card);
+      else drawBarcodes(card);
+
+      let startX = null;
+      const area = $('pay-swipe');
+      area.onpointerdown = e => startX = e.clientX;
+      area.onpointercancel = () => startX = null;
+      area.onpointerup = e => {
+        if (startX === null) return;
+        const dx = e.clientX - startX;
+        startX = null;
+        if (Math.abs(dx) >= 50) showItem(pay.at + (dx < 0 ? 1 : -1));
+      };
+      view.querySelector('.chipcard.current')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+
+    // 切換卡片不等於核銷
+    function showItem(index) {
+      if (pay.busy || index < 0 || index >= payment.items.length) return;
+      pay.at = index;
+      pay.raw = false;
+      renderPay();
+    }
+
+    function drawBarcodes(card) {
+      const options = { format: 'CODE128', lineColor: '#000000', background: '#ffffff', width: 2, height: window.innerHeight <= 660 ? 40 : 56, margin: 12, marginTop: 2, marginBottom: 2, fontSize: 13 };
+      try {
+        JsBarcode('#bc1', card.barcode, options);
+        JsBarcode('#bc2', card.barcode2, options);
+      } catch (e) {
+        $('view-pay').querySelector('.codes').innerHTML = '<p class="muted">無法產生條碼，請看原圖或改用其他付款</p>';
       }
     }
 
-    function renderCheckoutCard() {
-      $('checkout-session-total').innerText = `$${sessionUsedAmount} (${sessionUsedCount}張)`;
-
-      if (checkoutIndex >= checkoutQueue.length) {
-        alert(`🎉 佇列中的卡片已全部結帳完畢！本輪共核銷 $${sessionUsedAmount}`);
-        closeCheckout();
-        return;
-      }
-
-      const card = checkoutQueue[checkoutIndex];
-      $('checkout-progress').innerText = `${checkoutIndex + 1} / ${checkoutQueue.length}`;
-      $('co-balance').innerText = `$${card.balance}`;
-
-      showingRawImage = false;
-      $('co-barcodes').classList.remove('hidden');
-      $('co-crop-img').classList.add('hidden');
-      $('btn-toggle-img').innerText = '刷不過？切換顯示實體卡片裁切原圖';
-
-      const options = { format: 'CODE128', lineColor: '#000000', background: '#ffffff', width: 2, height: 80, displayValue: true, fontSize: 16, margin: 20, marginTop: 6, marginBottom: 6 };
-      JsBarcode('#co-barcode-svg', card.barcode, options);
-      JsBarcode('#co-barcode2-svg', card.barcode2, options);
-
-      if (card.cropImage) {
-        $('co-crop-img').src = card.cropImage;
-      }
+    const hasPhoto = card => String(card.cropImage || '').startsWith('data:image/');
+    function rawMarkup(card) {
+      if (!hasPhoto(card)) return '<p class="muted">沒有原圖</p>';
+      return `<img id="raw-img" alt="卡背照片"><span class="muted">${pay.whole ? '整張卡背・點圖放大條碼' : '已放大條碼・點圖看整張'}</span>`;
     }
 
-    function toggleBarcodeImage() {
-      const card = checkoutQueue[checkoutIndex];
-      if (!card.cropImage) {
-        alert('這張卡片建檔時沒有儲存到照片喔！');
-        return;
-      }
-      showingRawImage = !showingRawImage;
-      $('co-barcodes').classList.toggle('hidden', showingRawImage);
-      $('co-crop-img').classList.toggle('hidden', !showingRawImage);
-      $('btn-toggle-img').innerText = showingRawImage
-        ? '切換回高對比數位條碼'
-        : '刷不過？切換顯示實體卡片裁切原圖';
+    // 預設放大兩段條碼區域（卡背左側下半），點一下看整張
+    function showRaw(card) {
+      const img = $('raw-img');
+      if (!img) return;
+      img.onclick = () => { pay.whole = !pay.whole; renderPay(); };
+      if (pay.whole) return img.src = card.cropImage;
+      const source = new Image();
+      source.onload = () => {
+        const sw = source.width * 0.68, sh = source.height * 0.5;
+        const canvas = document.createElement('canvas');
+        canvas.width = sw;
+        canvas.height = sh;
+        canvas.getContext('2d').drawImage(source, 0, source.height * 0.48, sw, sh, 0, 0, sw, sh);
+        img.src = canvas.toDataURL('image/jpeg', 0.92);
+      };
+      source.src = card.cropImage;
     }
 
-    function prevCheckoutCard() {
-      if (!checkoutBusy && checkoutIndex > 0) {
-        checkoutIndex--;
-        renderCheckoutCard();
-      }
+    function markPaid() {
+      if (pay.busy) return;
+      const session = pay, item = payment.items[pay.at];
+      if (item.done) return;
+      pay.busy = true;
+      pay.raw = false;
+      // 寫入與蓋章期間整頁擋住點按與滑動，避免連點跳卡
+      const cover = document.createElement('div');
+      cover.className = 'pay-cover';
+      $('view-pay').append(cover);
+      markDone(session.sessionId, item.cardId).then(() => {
+        if (pay !== session) return;
+        const button = $('pay-btn');
+        button.classList.add('filling');
+        button.firstElementChild.textContent = `✓ ${money(item.use)} 記錄在案`;
+        cover.innerHTML = `<div class="stamp" role="status"><b>已刷</b><small>${money(item.use)} 在案</small></div>`;
+        navigator.vibrate?.(60);
+        setTimeout(() => {
+          if (pay !== session) return;
+          pay.busy = false;
+          if (!payment || payment.sessionId !== pay.sessionId) return syncPay();
+          if (payment.stage === 'confirm') return startConfirm();
+          const next = payment.items.findIndex((i, n) => n > pay.at && !i.done);
+          pay.at = next >= 0 ? next : payment.items.findIndex(i => !i.done);
+          renderPay();
+        }, STAMP_MS);
+      }).catch(error => { cover.remove(); payFailed(error); });
     }
 
-    function markUsedAndNext() {
-      if (checkoutBusy) return;
-      setCheckoutBusy(true);
-      const card = checkoutQueue[checkoutIndex];
-      // 回到已核銷的卡再按一次時，只換下一張，不重複計數
-      let saved = Promise.resolve();
-      if (card.status !== 'used') {
-        const amount = Number(card.balance);
-        saved = updateCard(card.id, c => applyChange(c, 'pay', 0)).then(() => {
-          sessionUsedAmount += amount;
-          sessionUsedCount++;
-          card.balance = 0;
-          card.status = 'used';
+    function tapChip(index) {
+      if (pay.busy) return;
+      const item = payment.items[index];
+      if (!item.done) return showItem(index);
+      const card = payCard(item);
+      openSheet(`<div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(fullNo(card.barcode))}</div>本次扣 <b>${money(item.use)}</b>・預估剩 <b>${money(item.before - item.use)}</b></div></div>
+        <button type="button" class="btn btn-primary" data-act="show">再看條碼（不重複計算）</button>
+        <button type="button" class="btn" style="color:var(--danger)" data-act="undo">撤銷核銷</button>`);
+      sheetButton('show', () => { closeSheet(); showItem(index); });
+      sheetButton('undo', () => {
+        closeSheet();
+        pay.busy = true;
+        undoDone(pay.sessionId, item.cardId).then(() => {
+          pay.busy = false;
+          pay.at = Math.max(0, payment.items.findIndex(i => i.cardId === item.cardId && !i.done));
+          pay.raw = false;
+          renderPay();
+          toast('已撤銷，請重新確認');
+        }).catch(payFailed);
+      });
+    }
+
+    function goConfirm() {
+      if (pay.busy) return;
+      pay.busy = true;
+      setStage(pay.sessionId, 'confirm').then(() => { pay.busy = false; startConfirm(); }).catch(payFailed);
+    }
+
+    function abortPay() {
+      if (pay.busy) return;
+      // 還沒刷任何一張：刪掉紀錄，回到金額輸入
+      if (!paidByCards(payment)) {
+        const { bill, other } = payment;
+        pay.busy = true;
+        return abandonPayment(pay.sessionId).then(() => {
+          pay = { screen: 'amount', bill: String(bill), other: String(other), typing: 'bill' };
+          renderAmount();
+        }).catch(payFailed);
+      }
+      openSheet(`<b>結束這次付款？</b><p class="muted">已刷 ${money(paidByCards(payment))}。放棄紀錄<b>不會撤銷門市實際扣款</b>，已刷的卡會標為「待核對」。</p>
+        <button type="button" class="btn btn-primary" data-act="stay">繼續付款</button>
+        <button type="button" class="btn" data-act="partial">只記錄已刷的部分</button>
+        <button type="button" class="btn" style="color:var(--danger)" data-act="abandon">放棄紀錄</button>`);
+      sheetButton('stay', closeSheet);
+      sheetButton('partial', () => { closeSheet(); goConfirm(); });
+      sheetButton('abandon', () => {
+        closeSheet();
+        pay.busy = true;
+        abandonPayment(pay.sessionId).then(() => { closePay(); toast('已放棄紀錄，請核對已刷的卡'); }).catch(payFailed);
+      });
+    }
+
+    // ----- 確認餘額 -----
+    const presetOf = item => String(item.before - item.use);
+
+    // 依刷卡順序列出，預設選最後刷的卡
+    function startConfirm() {
+      const done = doneItems(payment);
+      pay.screen = 'confirm';
+      pay.values = Object.fromEntries(done.map(i => [i.cardId, payment.edits[i.cardId] ?? presetOf(i)]));
+      pay.row = done.length - 1;
+      pay.fresh = true;
+      renderConfirm();
+    }
+
+    function renderConfirm(error = '') {
+      const done = doneItems(payment);
+      $('view-pay').innerHTML = `<div class="pay-head"><button type="button" data-act="back">‹ 返回付款</button><b>確認餘額</b><span style="width:6em"></span></div>
+        <p class="muted text-center" style="flex:none">依收據核對，點金額可改。按確認才會寫入。</p>
+        <div class="pay-mid" style="padding:6px 12px">${done.map((item, i) => {
+          const card = payCard(item), value = pay.values[item.cardId];
+          const color = value !== presetOf(item) ? 'var(--danger)' : '#1d4ed8';
+          return `<div class="confirm-row ${faceClass(card.initialAmount)}">${miniCard(card.initialAmount)}
+            <div class="flex-1 min-w-0"><div class="num" style="font-size:13px">${escapeHTML(fullNo(card.barcode))}</div><span class="muted">扣 ${money(item.use)}</span></div>
+            <span class="muted">剩餘</span>
+            <button type="button" class="after" data-row="${i}" aria-pressed="${i === pay.row}" style="color:${color};${i === pay.row ? `border:3px solid ${color}` : ''}">${escapeHTML(value) || '&nbsp;'}</button></div>`;
+        }).join('')}</div>
+        <p role="alert" style="flex:none;color:var(--danger);text-align:center;font-size:13px;min-height:18px">${escapeHTML(error)}</p>
+        <div class="compact" style="flex:none;padding:0 16px">${keypad()}</div>
+        <div class="pay-foot"><button type="button" class="btn btn-primary w-full" data-act="confirm">確認</button></div>`;
+      const view = $('view-pay');
+      view.querySelector('[data-act="back"]').onclick = () => {
+        if (pay.busy) return;
+        pay.busy = true;
+        setStage(pay.sessionId, 'swipe').then(() => {
+          pay.busy = false;
+          pay.at = Math.max(0, payment.items.findIndex(i => !i.done));
+          pay.raw = false;
+          renderPay();
+        }).catch(payFailed);
+      };
+      view.querySelectorAll('[data-row]').forEach(btn => btn.onclick = () => { pay.row = Number(btn.dataset.row); pay.fresh = true; renderConfirm(); });
+      view.querySelector('[data-act="confirm"]').onclick = finishPay;
+      bindKeys(key => {
+        const id = done[pay.row].cardId, old = pay.values[id];
+        const next = key === '清除' ? '' : key === '⌫' ? old.slice(0, -1) : ((pay.fresh ? '' : old) + key).replace(/^0+(?=\d)/, '').slice(0, 4);
+        pay.values[id] = next;
+        pay.fresh = false;
+        saveEdit(pay.sessionId, id, next).catch(() => toast('暫存失敗，請完成確認後再離開'));
+        renderConfirm();
+      });
+      view.querySelector('.after[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function finishPay() {
+      if (pay.busy) return;
+      const done = doneItems(payment);
+      const bad = done.findIndex(item => {
+        const value = pay.values[item.cardId];
+        return value === '' || Number(value) > payCard(item).initialAmount;
+      });
+      if (bad >= 0) {
+        pay.row = bad;
+        pay.fresh = true;
+        return renderConfirm('剩餘金額需為 0 到面額之間');
+      }
+      pay.busy = true;
+      const values = Object.fromEntries(done.map(i => [i.cardId, Number(pay.values[i.cardId])]));
+      finalizePayment(pay.sessionId, values)
+        .then(() => { closePay(); toast('已記錄這次付款'); })
+        .catch(error => {
+          if (error.gone) return payFailed(error);
+          pay.busy = false;
+          renderConfirm(error.message || '儲存失敗，請再試一次');
         });
-      }
-      saved.then(() => {
-        checkoutIndex++;
-        renderCheckoutCard();
-      }).catch(() => alert('儲存失敗，請再試一次'))
-        .finally(() => setTimeout(() => setCheckoutBusy(false), MARK_COOLDOWN_MS));
     }
 
     // ===== 備份與還原 =====
@@ -1740,12 +2149,14 @@
     // 整批在單一 transaction 寫入；任何一筆失敗就全部不寫
     function applyImport(imported, overwrite) {
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction([STORE_NAME, PAY_STORE], 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         let failure = null;
+        const pending = tx.objectStore(PAY_STORE).count();
         const request = store.getAll();
         request.onsuccess = () => {
           try {
+            if (pending.result) throw new Error('有一筆付款尚未完成');
             for (const { card, current, kind } of planImport(imported, request.result)) {
               if (kind === 'new') { store.put(card); continue; }
               if (kind === 'diff' && overwrite) {
@@ -1798,6 +2209,7 @@
         try {
           const { cards, fixed } = parseBackup(e.target.result);
           await loadCards();
+          if (payment) throw new Error('有一筆付款尚未完成，完成或放棄後才能匯入');
           const plan = planImport(cards, allCards);
           const count = kind => plan.filter(p => p.kind === kind).length;
           const overCount = cards.filter(c => c.needsCheck).length;
