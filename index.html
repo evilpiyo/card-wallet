@@ -31,7 +31,6 @@
     .btn:disabled { opacity: .35; cursor: default; }
     .btn-primary { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; }
     .btn-danger { color: var(--danger); }
-    .btn-menu { text-align: left; padding: 16px; display: block; width: 100%; }
     .chip { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 99px; padding: 7px 14px; font-size: 14px; cursor: pointer; }
     .chip[aria-pressed="true"] { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; }
     .field { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 12px; padding: 12px; font-size: 16px; }
@@ -49,31 +48,116 @@
     .pay { flex: 1; height: 58px; font-size: 20px; border-radius: 16px; }
     .set { width: 84px; height: 58px; border-radius: 16px; }
 
-    /* 迷你卡面：顏色代表面額，不隨主題改變 */
-    .cards { display: flex; flex-wrap: wrap; gap: 6px; row-gap: 10px; }
-    .cards figure { position: relative; width: calc((100% - 30px) / 6); max-width: 56px; aspect-ratio: 1 / 2; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(60,50,30,.14); background: linear-gradient(#e4e4e4, #bdbdbd); color: #222; }
-    .cards img { position: absolute; inset: 0; width: 100%; height: 100%; }
+    /* 迷你卡面：顏色代表面額，不隨主題改變。彩色＝可用、淡化＝已用完、灰階＝沒有 */
+    .cards { display: flex; flex: none; gap: 6px; overflow-x: auto; justify-content: safe center; padding: 2px 0 6px; }
+    .cards figure { position: relative; flex: none; width: calc((100% - 30px) / 6); min-width: 44px; max-width: 56px; aspect-ratio: 54 / 85.6; border-radius: 10px; overflow: hidden; background: #fff; color: #222; box-shadow: 0 4px 12px rgba(60,50,30,.14); }
+    .cards img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .cards span, .cards b { position: absolute; right: 6px; line-height: 1; text-shadow: 0 0 3px rgba(255,255,255,.85); }
     .cards span { top: 8px; font-size: 13px; font-weight: 700; }
     .cards b { bottom: 7px; font-size: 12px; font-weight: 700; }
     .cards .d35 { color: #5c1d05; } .cards .d50 { color: #06364f; } .cards .d100 { color: #06381a; }
     .cards .d200 { color: #4a3200; } .cards .d500 { color: #2c3a02; } .cards .d1000 { color: #610a0f; }
+    .cards .spent { box-shadow: none; border: 1px solid var(--line); }
+    .cards .spent img { opacity: .35; }
+    .cards .none { box-shadow: none; color: #666; }
+    .cards .none img { filter: grayscale(1); opacity: .6; }
+    .home-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-weight: 700; }
+    .link { background: none; border: 0; padding: 6px; color: var(--muted); font-size: 14px; font-weight: 400; text-decoration: underline; cursor: pointer; }
 
-    .card-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    /* 面額代表色 */
+    .f35 { --tone: #e4602f; } .f50 { --tone: #1e9fd0; } .f100 { --tone: #17a455; } .f200 { --tone: #eeb008; }
+    .f500 { --tone: #93bc1f; } .f1000 { --tone: #e0343a; } .fx { --tone: #9ca3af; }
+    .mini { position: relative; display: block; flex: none; width: 36px; aspect-ratio: 54 / 85.6; border-radius: 7px; overflow: hidden; background: linear-gradient(#e4e4e4, #bdbdbd); color: #222; }
+    .mini img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+    .mini i { position: absolute; right: 3px; top: 3px; font-style: normal; font-size: 11px; font-weight: 700; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+    .num { font-family: ui-monospace, Consolas, monospace; font-size: 14px; white-space: nowrap; }
+    .row { display: flex; align-items: center; gap: 10px; }
 
-    /* 掃描畫面 */
-    #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
-    .scan-chip { border: 1px solid #374151; background: #1f2937; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 14px; }
-    .scan-chip[aria-pressed="true"] { background: #059669; border-color: #34d399; font-weight: 700; }
-    /* 取景框固定不動，兩條紅線對應卡背上兩段條碼的高度，整張卡對準一次即可 */
-    #guide-box { position: absolute; left: 50%; top: 50%; width: 92%; max-width: 420px; aspect-ratio: 1.586 / 1; transform: translate(-50%, -50%); }
-    .scan-line { position: absolute; left: 3%; right: 34%; height: 2px; background: #ef4444; box-shadow: 0 0 8px red; }
-    .scan-line span { position: absolute; right: -20px; top: -10px; color: #fff; font-size: 14px; }
-    .scan-line.done { background: #34d399; box-shadow: 0 0 8px #34d399; }
-    .guide-title { position: absolute; left: 4%; top: 2%; width: 28%; height: 10%; border: 1px dashed #fca5a5; border-radius: 4px; color: #fca5a5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-    .guide-bars { position: absolute; left: 5%; right: 40%; height: 13%; opacity: .28; background: repeating-linear-gradient(90deg, #fff 0 2px, transparent 2px 4px, #fff 4px 5px, transparent 5px 9px); }
-    .guide-qr { position: absolute; right: 4%; top: 57%; width: 12%; aspect-ratio: 1; border: 1px dashed rgba(255,255,255,.6); border-radius: 4px; color: rgba(255,255,255,.8); font-size: 10px; display: grid; place-items: center; }
+    /* 卡片管理 */
+    .cards-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 4px; }
+    .tabs { display: flex; border-bottom: 1px solid var(--line); }
+    .tabs button { flex: 1; padding: 10px; background: none; border: 0; border-bottom: 3px solid transparent; font-weight: 700; color: var(--muted); }
+    .tabs button[aria-pressed="true"] { color: var(--text); border-color: var(--action); }
+    .filters { display: flex; flex: none; justify-content: space-between; gap: 2px; padding: 10px 12px 2px; overflow-x: auto; }
+    .filter { position: relative; flex: none; width: 42px; min-height: 80px; padding: 0; background: none; border: 0; font-size: 12px; color: var(--text); }
+    .filter .mini, .filter .all { width: 38px; margin: 0 auto 3px; border: 2px solid transparent; }
+    .filter .all { display: grid; place-items: center; aspect-ratio: 54 / 85.6; border-radius: 7px; background: var(--surface); border-color: var(--line); font-weight: 700; }
+    .filter[aria-pressed="true"] { transform: translateY(-3px); font-weight: 700; }
+    .filter[aria-pressed="true"] .mini, .filter[aria-pressed="true"] .all { border-color: #111; }
+    .filter[aria-pressed="true"]::after { content: "✓"; position: absolute; top: -6px; right: 0; width: 16px; height: 16px; border-radius: 50%; background: #111; color: #fff; font-size: 10px; display: grid; place-items: center; }
+    .filter.none .mini img { filter: grayscale(1); opacity: .6; }
+    .list-note { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 2px 12px 2px 16px; font-size: 13px; color: var(--muted); }
+    .eye { width: 40px; height: 32px; display: grid; place-items: center; flex: none; background: none; border: 0; color: var(--muted); }
+    .card-list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 12px; }
+    .item { position: relative; margin: 8px 12px; border-radius: 14px; overflow: hidden; }
+    .item > .hist, .item > .del { position: absolute; top: 2px; bottom: 2px; width: 78px; border: 0; color: #fff; font-weight: 700; }
+    .item > .hist { left: 2px; border-radius: 12px 0 0 12px; background: #2563eb; }
+    .item > .del { right: 2px; border-radius: 0 12px 12px 0; background: var(--danger); }
+    .item .face { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; background: color-mix(in srgb, var(--tone) 11%, #fff); border-left: 6px solid var(--tone); color: #1d1d1b; touch-action: pan-y; user-select: none; transition: transform .2s; cursor: pointer; }
+    .item.used .face { background: color-mix(in srgb, var(--tone) 4%, #fff); border-left-color: color-mix(in srgb, var(--tone) 35%, #fff); }
+    .item.used .mini img { opacity: .35; }
+    .editbtn { flex: none; min-height: 40px; padding: 0 10px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-size: 14px; font-weight: 700; color: #1d1d1b; }
     .badge { display: inline-block; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 99px; padding: 0 8px; }
+
+    /* 底部面板與提示 */
+    .shade { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
+    .sheet { width: 100%; max-width: 28rem; max-height: 92%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--bg); color: var(--text); }
+    .toast { position: fixed; left: 16px; right: 16px; bottom: 24px; z-index: 60; max-width: 26rem; margin: 0 auto; padding: 10px 14px; border-radius: 12px; background: #222; color: #fff; font-size: 14px; text-align: center; }
+    .btn-fill-danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
+    .face-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; justify-items: center; }
+    .face-grid button { background: none; border: 2px solid transparent; border-radius: 10px; padding: 4px 8px; color: var(--text); }
+    .face-grid button[aria-pressed="true"] { border-color: var(--text); }
+    .face-grid .mini { margin: 0 auto 4px; }
+    .fillcard { position: relative; width: 110px; aspect-ratio: 54 / 85.6; margin: 0 auto; flex: none; border-radius: 14px; overflow: hidden; background: linear-gradient(#e4e4e4, #bdbdbd); box-shadow: 0 8px 20px rgba(0,0,0,.18); color: #222; }
+    .fillcard img { width: 100%; height: 100%; object-fit: cover; }
+    .fillcard .empty { position: absolute; left: 0; right: 0; top: 0; background: rgba(235,233,228,.93); border-bottom: 3px solid var(--tone); transition: height .25s; }
+    .fillcard b { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-size: 26px; text-shadow: 0 0 6px #fff, 0 0 6px #fff; }
+    .histrow { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .photo { width: 100%; border-radius: 10px; border: 1px solid var(--line); }
+
+    /* 設定 */
+    .group { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .group > * { display: flex; width: 100%; align-items: center; gap: 12px; padding: 14px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; }
+    .group > *:last-child { border-bottom: 0; }
+    .group > .primary { background: var(--action); color: var(--on-action); font-weight: 700; }
+    .ic { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .home-check { background: none; border: 0; color: var(--warn); font-size: 14px; text-decoration: underline; text-align: left; padding: 0; cursor: pointer; }
+
+    /* 掃描畫面：取景框靠上、清單在下 */
+    #view-scanner { background: #111418; color: #fff; }
+    .scan-top { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
+    .dark { background: #1f2937; color: #fff; border: 1px solid #374151; border-radius: 10px; padding: 7px 12px; font-size: 14px; }
+    .cam { position: relative; flex: none; display: flex; justify-content: center; padding: 8px 16px; overflow: hidden; background: #000; }
+    #reader { position: absolute; inset: 0; }
+    #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+    /* 取景框固定不動，兩條導引線對應卡背上兩段條碼的高度，整張卡對準一次即可 */
+    #guide-box { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1.586 / 1; border: 1px solid rgba(255,255,255,.55); border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,.6); pointer-events: none; transition: border-color .2s; }
+    #guide-box.saved { border: 2px solid #4ade80; }
+    .guide-title { position: absolute; left: 3%; top: 3%; width: 40%; height: 15%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.8); }
+    .guide-bars { position: absolute; left: 5%; right: 40%; height: 13%; opacity: .22; background: repeating-linear-gradient(90deg, #fff 0 2px, transparent 2px 4px, #fff 4px 5px, transparent 5px 9px); }
+    .guide-qr { position: absolute; right: 4%; top: 57%; width: 12%; aspect-ratio: 1; border: 1px dashed rgba(255,255,255,.5); border-radius: 4px; color: rgba(255,255,255,.7); font-size: 10px; display: grid; place-items: center; }
+    /* 三個讀取區：藍＝等待、綠＝已讀到、黃＝需注意 */
+    .z { --c: 96,165,250; box-shadow: 0 0 6px rgba(var(--c),.35), 0 0 14px 1px rgba(var(--c),.2); animation: breathe 2.4s ease-in-out infinite; }
+    .z.ok { --c: 74,222,128; animation: none; }
+    .z.warn { --c: 251,191,36; animation: none; }
+    .g-face { position: absolute; left: 3%; top: 3%; width: 40%; height: 15%; border: 1px solid rgba(var(--c),.9); border-radius: 8px; }
+    .g-line { position: absolute; left: 3%; right: 34%; height: 2px; border-radius: 2px; background: rgba(var(--c),.9); }
+    .z b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); white-space: nowrap; border-radius: 99px; padding: 1px 7px; font-size: 11px; background: rgb(var(--c)); color: #111; }
+    @keyframes breathe { 50% { box-shadow: 0 0 3px rgba(var(--c),.12), 0 0 8px rgba(var(--c),.06); } }
+    @media (prefers-reduced-motion: reduce) { .z { animation: none; } }
+    .scanbar { flex: none; padding: 8px 16px 6px; border-bottom: 1px solid #374151; min-height: 74px; }
+    .scan-status { display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 14px; font-weight: 700; }
+    .scan-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #60a5fa; flex: none; }
+    .latest { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; }
+    .trash { width: 44px; height: 36px; display: grid; place-items: center; flex: none; margin-left: auto; background: none; border: 0; color: inherit; }
+    .groups { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px env(safe-area-inset-bottom); }
+    .grp { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 52px; padding: 5px 0; background: none; border: 0; border-bottom: 1px solid #252b33; color: inherit; text-align: left; }
+    .grp .mini { width: 28px; border-radius: 5px; }
+    .grp .mini i { font-size: 9px; right: 2px; top: 2px; }
+    .grp.bump { animation: bump .9s ease-out; }
+    @keyframes bump { from { background: rgba(74,222,128,.25); } }
+    .sheet-row { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+
     /* 結帳條碼 */
     .co-barcode { width: 100%; height: auto; display: block; }
   </style>
@@ -94,8 +178,8 @@
         <p class="total" id="total-balance">$0</p>
       </div>
       <div class="cards" id="denominations"></div>
-      <p class="muted" id="home-empty" hidden>到「設定」新增第一張卡。</p>
-      <p class="muted" id="home-incomplete" hidden></p>
+      <button type="button" class="home-check" id="home-check" onclick="openCards()" hidden></button>
+      <div class="home-empty" id="home-empty" hidden></div>
       <button class="quote" id="quote" onclick="nextQuote()" title="點一下換一句"></button>
     </div>
 
@@ -109,6 +193,7 @@
       <button class="btn btn-primary" onclick="exportData()">立即備份</button>
     </div>
 
+    <p class="muted text-center" id="pay-hint" hidden>目前沒有可付款的卡片</p>
     <div class="page-bar">
       <button class="btn btn-primary pay" id="btn-pay" onclick="openCheckout()">付款</button>
       <button class="btn set" onclick="showPage('view-settings')">設定</button>
@@ -119,59 +204,40 @@
   <section id="view-settings" class="page sub-page" hidden>
     <div class="page-body">
       <h2 class="page-title">設定</h2>
-      <button class="btn btn-primary btn-menu" onclick="showPage('view-add')">新增卡片</button>
-      <button class="btn btn-menu" onclick="showPage('view-cards')">卡片管理</button>
-      <button class="btn btn-menu" onclick="showPage('view-text')">首頁文字</button>
-      <button class="btn btn-menu" onclick="exportData()">備份（下載檔案）</button>
-      <label class="btn btn-menu">還原（選擇備份檔）
-        <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
-      </label>
+      <div class="group">
+        <button type="button" class="primary" onclick="openScanner()"><svg class="ic" viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6"/></svg>新增卡片</button>
+        <button type="button" onclick="openCards()"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>卡片管理</button>
+      </div>
+      <div class="group">
+        <button type="button" onclick="showPage('view-text')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3"/></svg>首頁文字</button>
+      </div>
+      <div class="group">
+        <button type="button" onclick="exportData()"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="flex-1">備份<br><span class="muted" id="settings-backup"></span></span><span class="badge" id="settings-due" hidden>該備份了</span></button>
+        <label><svg class="ic" viewBox="0 0 24 24"><path d="M12 16V5M7 10l5-5 5 5M5 20h14"/></svg>還原
+          <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+        </label>
+      </div>
     </div>
     <div class="page-bar"><button class="btn w-full" onclick="showPage(null)">返回首頁</button></div>
   </section>
 
-  <!-- 新增卡片：選擇方式 -->
-  <section id="view-add" class="page sub-page" hidden>
-    <div class="page-body">
-      <h2 class="page-title">新增卡片</h2>
-      <button class="btn btn-primary btn-menu" onclick="openScanner()">批量掃描<br><span class="text-xs font-normal">使用相機，連續建檔</span></button>
-      <button class="btn btn-menu" onclick="openManual()">手動輸入<br><span class="muted">不啟動相機；之後需掃描補齊第②段才能付款</span></button>
-    </div>
-    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-settings')">返回</button></div>
-  </section>
-
-  <!-- 手動輸入 -->
-  <section id="view-manual" class="page sub-page" hidden>
-    <form id="manual-form" class="page-body" onsubmit="submitManual(event)">
-      <h2 class="page-title">手動輸入</h2>
-      <label>卡號（第①段條碼下方的 16 碼）
-        <input id="m-barcode" class="field" inputmode="numeric" autocomplete="off" required>
-      </label>
-      <div>
-        <p class="muted mb-2">面額</p>
-        <div class="flex flex-wrap gap-2" id="m-amounts"></div>
-        <input id="m-custom" class="field mt-2" type="number" min="1" step="1" placeholder="自訂面額" hidden>
-      </div>
-      <label>目前餘額（空白＝等於面額）
-        <input id="m-balance" class="field" type="number" min="1" step="1">
-      </label>
-      <p id="m-status" role="status" class="muted"></p>
-      <button class="btn btn-primary" type="submit">新增</button>
-    </form>
-    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-add')">返回</button></div>
-  </section>
-
   <!-- 卡片管理 -->
   <section id="view-cards" class="page sub-page" hidden>
-    <div class="page-body">
-      <h2 class="page-title">卡片管理</h2>
-      <div class="flex gap-2">
-        <button class="chip" id="filter-active" aria-pressed="true" onclick="setFilter('active')">可用卡片</button>
-        <button class="chip" id="filter-used" aria-pressed="false" onclick="setFilter('used')">已用完</button>
-      </div>
-      <div id="card-list" class="flex flex-col gap-3"></div>
+    <div class="cards-head">
+      <button type="button" onclick="showPage('view-settings')">‹ 返回</button>
+      <h2 class="font-bold">卡片管理</h2>
+      <span class="w-11"></span>
     </div>
-    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-settings')">返回</button></div>
+    <div class="tabs">
+      <button type="button" id="tab-active" onclick="setCardTab('active')"></button>
+      <button type="button" id="tab-used" onclick="setCardTab('used')"></button>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="list-note">
+      <span id="list-summary"></span>
+      <span class="flex items-center gap-1">← 刪除　紀錄 →<button type="button" class="eye" id="eye-all" onclick="toggleNumbers()"></button></span>
+    </div>
+    <div class="card-list" id="card-list"></div>
   </section>
 
   <!-- 首頁文字 -->
@@ -186,47 +252,37 @@
   </section>
 
   <!-- 掃描 -->
-  <div id="view-scanner" class="hidden fixed inset-0 bg-black z-30 flex flex-col">
-    <div class="p-4 flex justify-between items-center text-white bg-black/70 z-10">
-      <button onclick="closeScanner()" class="text-sm bg-gray-800 px-3 py-1.5 rounded-lg">✕ 關閉</button>
-      <span class="text-sm font-medium">將卡片對準框線自動掃描</span>
-      <span class="text-xs text-emerald-400" id="scan-session-count">本次已掃: 0</span>
+  <div id="view-scanner" class="hidden fixed inset-0 z-30 flex flex-col">
+    <div class="scan-top">
+      <button type="button" class="dark" onclick="closeScanner()">✕ 完成</button>
+      <b id="scan-total"></b>
     </div>
 
-    <div class="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center">
-      <div id="reader" class="w-full h-full"></div>
-      <div id="guide-box" class="border-2 border-emerald-400 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] pointer-events-none">
+    <div class="cam">
+      <div id="reader"></div>
+      <div id="guide-box">
         <div class="guide-title">商品卡 N 元</div>
         <div class="guide-bars" style="top:53.5%"></div>
         <div class="guide-bars" style="top:78.5%"></div>
         <div class="guide-qr">QR</div>
-        <div class="scan-line" id="line-1" style="top:60%"><span>①</span></div>
-        <div class="scan-line" id="line-2" style="top:85%"><span>②</span></div>
+        <span class="g-face z" id="zone-face"><b></b></span>
+        <span class="g-line z" id="zone-1" style="top:60%"><b></b></span>
+        <span class="g-line z" id="zone-2" style="top:85%"><b></b></span>
       </div>
     </div>
 
-    <div class="bg-gray-900 px-4 py-3 text-white z-10">
-      <p class="text-sm font-bold" id="scan-status" role="status"></p>
-      <div class="flex gap-2 mt-2" id="face-choice" hidden>
-        <button type="button" class="scan-chip" id="face-detected"></button>
-        <button type="button" class="scan-chip" id="face-preset"></button>
+    <div class="scanbar">
+      <div class="scan-status">
+        <span class="dot" id="scan-dot"></span><span class="flex-1" id="scan-status" role="status"></span>
+        <button type="button" class="dark" id="scan-reset" onclick="resetPending()" hidden>重掃這張</button>
       </div>
-      <div class="flex justify-between items-center gap-2 mt-1 min-h-[32px]">
-        <span class="text-xs text-gray-300" id="scan-progress"></span>
-        <button type="button" class="scan-chip" id="scan-reset" onclick="resetPending()" hidden>重掃這張</button>
-      </div>
-      <div class="flex items-center gap-2 mt-1" id="scan-last" hidden>
-        <img id="scan-last-img" class="w-12 h-8 object-cover rounded" alt="">
-        <span class="flex-1 text-xs text-emerald-300" id="scan-last-text"></span>
-        <button type="button" class="scan-chip" onclick="undoLastScan()">撤回</button>
-      </div>
-      <div class="flex flex-wrap gap-2 mt-2" id="preset-amounts" aria-label="掃描預設面額"></div>
-      <div class="flex gap-2 mt-2">
-        <input type="text" id="manual-barcode" inputmode="numeric" placeholder="①反光難掃時，輸入 16 碼" class="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
-        <button onclick="manualSegment()" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold">帶入①</button>
-      </div>
+      <div class="latest" id="scan-latest"></div>
     </div>
+    <div class="groups" id="scan-groups"></div>
   </div>
+
+  <div class="shade" id="shade" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+  <div class="toast" id="toast" role="status" hidden></div>
 
   <!-- 解碼用離屏容器：函式庫依容器尺寸縮放圖片 -->
   <div id="decode-area" aria-hidden="true" style="position:fixed;left:-10000px;top:0;width:1600px;height:400px;overflow:hidden"></div>
@@ -287,9 +343,9 @@
     const FACE_VALUES = [35, 50, 100, 200, 500, 1000];
     let db;
     let allCards = [];
-    let currentFilter = 'active';
-    let presetAmount = 100;
-    let scanSessionCount = 0;
+    let cardTab = 'active';
+    let cardFace = 0;      // 0＝全部
+    let showNumbers = false;
 
     const $ = id => document.getElementById(id);
 
@@ -340,18 +396,63 @@
       });
     }
 
-    function saveCardToDB(card) {
-      return writeStore(store => store.put(card));
-    }
-
     function removeCard(id) {
       return writeStore(store => store.delete(id));
     }
 
-    function deleteCardFromDB(id) {
-      if (!confirm('確定要刪除這張卡片嗎？')) return;
-      removeCard(id).catch(() => alert('刪除失敗，請再試一次'));
+    // 在同一個 transaction 內重新讀取再修改，避免用畫面上的舊物件覆蓋
+    function updateCard(id, mutate) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        let failure = null;
+        const request = store.get(id);
+        request.onsuccess = () => {
+          const card = request.result;
+          if (!card) { failure = new Error('找不到這張卡'); return tx.abort(); }
+          mutate(card);
+          store.put(card);
+        };
+        tx.oncomplete = () => loadCards().then(resolve);
+        tx.onabort = () => { loadCards(); reject(failure || tx.error); };
+      });
     }
+
+    // 新增前在同一個 transaction 內檢查重複（另一個分頁可能剛建過）
+    function addCard(card) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        let failure = null;
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const codes = [card.barcode, card.barcode2].filter(Boolean);
+          if (request.result.some(c => codes.includes(c.barcode) || codes.includes(c.barcode2))) {
+            failure = new Error('這張卡已經建檔過');
+            return tx.abort();
+          }
+          store.add(card);
+        };
+        tx.oncomplete = () => loadCards().then(resolve);
+        tx.onabort = () => { loadCards(); reject(failure || tx.error); };
+      });
+    }
+
+    // 變更餘額或面額，並追加紀錄。舊卡第一次變動時先留下原值（時間不明）
+    function applyChange(card, type, balance, face = card.initialAmount) {
+      if (balance !== card.balance || face !== card.initialAmount) {
+        const history = Array.isArray(card.history) ? card.history
+          : [{ at: null, balance: card.balance, face: card.initialAmount, type: 'before' }];
+        card.history = [...history, { at: Date.now(), balance, face, type }];
+        card.balance = balance;
+        card.initialAmount = face;
+      }
+      card.status = balance > 0 ? 'active' : 'used';
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && db) loadCards();
+    });
 
     // ===== 頁面切換 =====
     function showPage(id) {
@@ -359,6 +460,7 @@
       $('view-home').hidden = Boolean(id);
       $('backup-popover').hidden = true;
       $('bell').setAttribute('aria-expanded', 'false');
+      closeSheet();
       if (id === 'view-text') {
         document.querySelectorAll('[data-text]').forEach(input => input.value = textOf(input.dataset.text));
       }
@@ -380,9 +482,9 @@
       return allCards.filter(c => c.status === 'active' && c.balance > 0);
     }
 
-    // 兩段齊全才能付款
+    // 兩段齊全且非待核對才能付款
     function payableCards() {
-      return activeCards().filter(isComplete);
+      return activeCards().filter(c => isComplete(c) && !c.needsCheck);
     }
 
     function render() {
@@ -395,43 +497,67 @@
       const sumOf = list => list.reduce((sum, c) => sum + Number(c.balance), 0);
       $('total-balance').textContent = `$${sumOf(cards).toLocaleString()}`;
       $('btn-pay').disabled = cards.length === 0;
-      const incomplete = activeCards().filter(c => !isComplete(c));
-      $('home-empty').hidden = cards.length > 0 || incomplete.length > 0;
-      $('home-incomplete').hidden = incomplete.length === 0;
-      $('home-incomplete').textContent = `另有 ${incomplete.length} 張待補掃（$${sumOf(incomplete).toLocaleString()}），尚不能付款。`;
-
-      // 依面額分組；部分使用的卡仍算在原面額
-      const counts = new Map();
-      cards.forEach(c => {
-        const value = Number(c.initialAmount) || 0;
-        counts.set(value, (counts.get(value) || 0) + 1);
-      });
-
-      $('denominations').replaceChildren(...[...counts].sort((a, b) => a[0] - b[0]).map(([value, count]) => {
-        const figure = document.createElement('figure');
-        figure.setAttribute('aria-label', `面額 ${value}，${count} 張`);
-        if (FACE_VALUES.includes(value)) {
-          figure.className = `d${value}`;
-          const img = document.createElement('img');
-          img.src = `cards/card-${value}.svg`;
-          img.alt = '';
-          figure.append(img);
-        }
-        const face = document.createElement('span');
-        face.textContent = value;
-        const num = document.createElement('b');
-        num.textContent = `×${count}`;
-        figure.append(face, num);
-        return figure;
-      }));
+      const toCheck = activeCards().filter(c => c.needsCheck).length;
+      $('home-check').hidden = toCheck === 0;
+      $('home-check').textContent = `${toCheck} 張待核對，未計入`;
+      renderHomeEmpty(cards.length);
+      renderDenominations(cards);
       renderBell();
     }
 
-    function setFilter(filter) {
-      currentFilter = filter;
-      $('filter-active').setAttribute('aria-pressed', filter === 'active');
-      $('filter-used').setAttribute('aria-pressed', filter === 'used');
-      renderCardList();
+    // 沒有可付款的卡時，依原因給不同引導
+    function renderHomeEmpty(payableCount) {
+      const box = $('home-empty');
+      box.hidden = payableCount > 0;
+      // 第三種狀態本身已說明原因，不再重複提示
+      $('pay-hint').hidden = payableCount > 0 || (allCards.length > 0 && activeCards().length > 0);
+      if (payableCount > 0) return box.replaceChildren();
+
+      const title = document.createElement('p');
+      const button = (text, className, onClick) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = className;
+        btn.textContent = text;
+        btn.onclick = onClick;
+        return btn;
+      };
+      if (allCards.length === 0) {
+        title.textContent = '尚未加入商品卡';
+        box.replaceChildren(title, button('新增第一張卡', 'btn btn-primary', openScanner));
+      } else if (activeCards().length === 0) {
+        title.textContent = '卡片已用完';
+        box.replaceChildren(title, button('新增卡片', 'btn btn-primary', openScanner),
+          button('查看已用完卡片', 'link', () => openCards('used')));
+      } else {
+        title.textContent = '目前沒有可付款的卡片';
+        box.replaceChildren(title, button('前往卡片管理', 'btn', () => openCards()));
+      }
+    }
+
+    // 固定五種面額；1000 只在有可付款的卡時出現。部分使用的卡仍算在原面額
+    function renderDenominations(payable) {
+      const countOf = (list, value) => list.filter(c => Number(c.initialAmount) === value).length;
+      const shown = FACE_VALUES.filter(value => value !== 1000 || countOf(payable, value) > 0);
+      $('denominations').replaceChildren(...shown.map(value => {
+        const count = countOf(payable, value);
+        const state = count ? '' : countOf(allCards, value) ? 'spent' : 'none';
+        const figure = document.createElement('figure');
+        figure.className = `d${value} ${state}`;
+        figure.setAttribute('aria-label', `面額 ${value}，${count ? `${count} 張可用` : state === 'spent' ? '沒有可用的卡' : '沒有卡'}`);
+        const img = document.createElement('img');
+        img.src = `cards/card-${value}.svg`;
+        img.alt = '';
+        const face = document.createElement('span');
+        face.textContent = value;
+        figure.append(img, face);
+        if (state !== 'none') {
+          const num = document.createElement('b');
+          num.textContent = `×${count}`;
+          figure.append(num);
+        }
+        return figure;
+      }));
     }
 
     // 卡片欄位來自掃描或匯入檔，寫入 innerHTML 前一律跳脫
@@ -439,48 +565,280 @@
       return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     }
 
-    function tailOf(barcode) {
-      return `…${String(barcode).slice(-4)}`;
+    const EYE = '<svg class="ic" style="width:20px;height:20px" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_OFF = EYE.replace('</svg>', '<path d="M4 4l16 16"/></svg>');
+    const money = value => `$${Number(value).toLocaleString()}`;
+    const faceClass = value => FACE_VALUES.includes(Number(value)) ? `f${Number(value)}` : 'fx';
+    const fullNo = no => String(no).replace(/(.{4})(?=.)/g, '$1 ');
+    const maskedNo = no => {
+      const text = String(no);
+      return text.length === 16 ? `**** **** ${text.slice(8, 12)} ${text.slice(12)}` : `**** ${text.slice(-4)}`;
+    };
+    const findCard = id => allCards.find(c => c.id === id);
+    const isUsed = card => !(card.status === 'active' && card.balance > 0);
+
+    function faceImage(value) {
+      return FACE_VALUES.includes(Number(value)) ? `<img src="cards/card-${Number(value)}.svg" alt="">` : '';
+    }
+
+    function miniCard(value, label = true) {
+      return `<span class="mini">${faceImage(value)}${label ? `<i>${escapeHTML(value)}</i>` : ''}</span>`;
+    }
+
+    // 進入卡片管理：回到遮蔽與全部面額
+    function openCards(tab = 'active') {
+      showPage('view-cards');
+      cardTab = tab;
+      cardFace = 0;
+      showNumbers = false;
+      renderCardList();
+    }
+
+    function setCardTab(tab) {
+      cardTab = tab;
+      renderCardList();
+    }
+
+    function setCardFace(value) {
+      cardFace = value;
+      renderCardList();
+    }
+
+    function toggleNumbers() {
+      showNumbers = !showNumbers;
+      renderCardList();
     }
 
     function renderCardList() {
-      const listEl = $('card-list');
-      const filtered = allCards.filter(c => currentFilter === 'active' ? (c.status === 'active' && c.balance > 0) : (c.status === 'used' || c.balance <= 0));
-
-      if (filtered.length === 0) {
-        listEl.innerHTML = `<p class="muted text-center py-10">目前沒有${currentFilter === 'active' ? '可用' : '已用完'}的卡片</p>`;
-        return;
+      const inTab = tab => allCards.filter(c => isUsed(c) === (tab === 'used'));
+      const pool = inTab(cardTab);
+      for (const [tab, label] of [['active', '未用完'], ['used', '已用完']]) {
+        $(`tab-${tab}`).textContent = `${label} ${inTab(tab).length}`;
+        $(`tab-${tab}`).setAttribute('aria-pressed', tab === cardTab);
       }
 
-      listEl.innerHTML = filtered.map(card => `
-        <div class="card-row">
-          <div class="flex items-center gap-3 min-w-0">
-            ${card.cropImage
-              ? `<img src="${escapeHTML(card.cropImage)}" class="w-16 h-10 object-cover rounded" alt="">`
-              : `<div class="muted w-16 h-10 flex items-center justify-center">無照片</div>`
-            }
-            <div>
-              <p class="muted font-mono">${escapeHTML(tailOf(card.barcode))} ${isComplete(card) ? '' : '<span class="badge">待補掃</span>'}</p>
-              <p class="font-bold text-lg">$${escapeHTML(card.balance)} <span class="muted font-normal">/ ${escapeHTML(card.initialAmount)}</span></p>
+      const shown = FACE_VALUES.filter(v => v !== 1000 || pool.some(c => Number(c.initialAmount) === v));
+      if (cardFace && !shown.includes(cardFace)) cardFace = 0;
+      $('filters').innerHTML = [0, ...shown].map(value => {
+        const count = pool.filter(c => !value || Number(c.initialAmount) === value).length;
+        return `<button type="button" class="filter ${value && !count ? 'none' : ''}" data-face="${value}" aria-pressed="${cardFace === value}" aria-label="${value ? `面額 ${value}` : '全部'}，${count} 張">
+          ${value ? miniCard(value) : '<span class="all">全部</span>'}${value && !count ? '' : count}</button>`;
+      }).join('');
+      $('filters').querySelectorAll('button').forEach(btn => btn.onclick = () => setCardFace(Number(btn.dataset.face)));
+
+      const rows = pool.filter(c => !cardFace || Number(c.initialAmount) === cardFace)
+        .sort((a, b) => a.initialAmount - b.initialAmount || a.createdAt - b.createdAt);
+      const payableSum = rows.filter(c => isComplete(c) && !c.needsCheck && !isUsed(c)).reduce((sum, c) => sum + Number(c.balance), 0);
+      $('list-summary').textContent = `${rows.length} 張・可付款 ${money(payableSum)}`;
+      $('eye-all').innerHTML = showNumbers ? EYE_OFF : EYE;
+      $('eye-all').setAttribute('aria-pressed', showNumbers);
+      $('eye-all').setAttribute('aria-label', showNumbers ? '遮蔽全部卡號' : '顯示全部完整卡號');
+
+      $('card-list').innerHTML = rows.map(card => `
+        <div class="item ${faceClass(card.initialAmount)} ${isUsed(card) ? 'used' : ''}">
+          <button type="button" class="hist" tabindex="-1">紀錄</button>
+          <button type="button" class="del" data-del="${escapeHTML(card.id)}">刪除</button>
+          <div class="face" data-id="${escapeHTML(card.id)}" role="button" tabindex="0" aria-label="看原圖">
+            ${miniCard(card.initialAmount)}
+            <div class="flex-1 min-w-0">
+              <div class="num">${escapeHTML(showNumbers ? fullNo(card.barcode) : maskedNo(card.barcode))}</div>
+              <b class="text-xl">${escapeHTML(money(card.balance))}</b>
+              ${card.needsCheck ? '<span class="badge">待核對</span>' : ''}
+              ${isComplete(card) ? '' : '<div class="text-xs" style="color:var(--danger)">缺第②段，請刪除後重掃</div>'}
             </div>
+            <button type="button" class="editbtn" data-edit="${escapeHTML(card.id)}">改餘額</button>
           </div>
-          <div class="flex gap-2 shrink-0">
-            <button data-id="${escapeHTML(card.id)}" onclick="editBalance(this.dataset.id)" class="chip">改餘額</button>
-            <button data-id="${escapeHTML(card.id)}" onclick="deleteCardFromDB(this.dataset.id)" class="chip btn-danger">刪</button>
-          </div>
-        </div>
-      `).join('');
+        </div>`).join('') || `<p class="muted text-center py-10">沒有符合的卡片</p>`;
+      bindCardRows();
+    }
+
+    // 左滑：露出刪除；右滑：開餘額紀錄；點一下：看原圖
+    function bindCardRows() {
+      const list = $('card-list');
+      let openRow = null;
+      const move = (el, x) => el.style.transform = `translateX(${x}px)`;
+
+      list.querySelectorAll('.face').forEach(el => {
+        let start = null, dx = 0, axis = '', base = 0;
+        el.onpointerdown = e => {
+          if (e.target.closest('button')) return;
+          if (e.clientX < 24 || window.innerWidth - e.clientX < 24) return; // 讓出邊緣返回手勢
+          start = { x: e.clientX, y: e.clientY };
+          dx = 0; axis = ''; base = openRow === el ? -80 : 0;
+        };
+        el.onpointermove = e => {
+          if (!start) return;
+          const mx = e.clientX - start.x, my = e.clientY - start.y;
+          if (!axis && Math.hypot(mx, my) > 12) {
+            axis = Math.abs(mx) > Math.abs(my) * 1.5 ? 'x' : 'y';
+            if (axis === 'x') el.setPointerCapture(e.pointerId);
+          }
+          if (axis !== 'x') return;
+          dx = Math.max(-80, Math.min(base ? 0 : 80, base + mx));
+          el.style.transition = 'none';
+          move(el, dx);
+        };
+        el.onpointerup = () => {
+          if (!start) return;
+          start = null;
+          el.style.transition = '';
+          if (axis === 'x') {
+            if (openRow && openRow !== el) move(openRow, 0);
+            openRow = dx < -40 ? el : null;
+            move(el, openRow ? -80 : 0);
+            if (dx > 40) showHistory(el.dataset.id);
+          } else if (!axis) {
+            if (openRow) { move(openRow, 0); openRow = null; }
+            else viewPhoto(el.dataset.id);
+          }
+        };
+        el.onpointercancel = () => {
+          start = null;
+          el.style.transition = '';
+          move(el, openRow === el ? -80 : 0);
+        };
+        el.onkeydown = e => { if (e.key === 'Enter' && e.target === el) viewPhoto(el.dataset.id); };
+      });
+      list.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = () => editBalance(btn.dataset.edit));
+      list.querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => askDelete(btn.dataset.del));
+    }
+
+    // ----- 底部面板 -----
+    let sheetOpenedAt = 0;
+    let toastTimer;
+
+    let sheetDismiss = null;
+
+    function openSheet(html, onDismiss = null) {
+      sheetDismiss = onDismiss;
+      $('sheet').innerHTML = html;
+      $('shade').hidden = false;
+      sheetOpenedAt = Date.now();
+    }
+
+    function closeSheet() {
+      $('shade').hidden = true;
+      $('sheet').replaceChildren();
+    }
+
+    // 剛開啟的瞬間不接受點背景，避免同一次觸控把面板關掉
+    $('shade').onclick = e => {
+      if (e.target === $('shade') && Date.now() - sheetOpenedAt > 350) (sheetDismiss || closeSheet)();
+    };
+
+    function sheetButton(action, handler) {
+      $('sheet').querySelector(`[data-act="${action}"]`).onclick = handler;
+    }
+
+    function toast(text) {
+      $('toast').textContent = text;
+      $('toast').hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => $('toast').hidden = true, 2200);
+    }
+
+    function viewPhoto(id) {
+      const card = findCard(id);
+      if (!card) return;
+      const hasImage = String(card.cropImage || '').startsWith('data:image/');
+      openSheet(`<div class="row justify-between"><span class="num">${escapeHTML(maskedNo(card.barcode))}</span><b>面額 $${escapeHTML(card.initialAmount)}</b></div>
+        ${hasImage ? '<img class="photo" alt="卡背原圖">' : '<p class="muted text-center py-10">沒有原圖</p>'}
+        <button type="button" class="btn" data-act="face">改面額（判讀錯誤時）</button>
+        <button type="button" class="btn" data-act="close">關閉</button>`);
+      if (hasImage) $('sheet').querySelector('.photo').src = card.cropImage;
+      sheetButton('face', () => askFaceChange(id));
+      sheetButton('close', closeSheet);
+    }
+
+    function askFaceChange(id) {
+      const card = findCard(id);
+      if (!card) return;
+      openSheet(`<b>改面額</b><p class="muted">${escapeHTML(maskedNo(card.barcode))}・目前 $${escapeHTML(card.initialAmount)}。未使用的卡，餘額跟著改；用過的卡保留餘額（不超過新面額）。</p>
+        <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}" aria-pressed="${v === Number(card.initialAmount)}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>
+        <button type="button" class="btn" data-act="cancel">取消</button>`);
+      $('sheet').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => changeFace(id, Number(btn.dataset.value)));
+      sheetButton('cancel', () => viewPhoto(id));
+    }
+
+    function changeFace(id, face) {
+      updateCard(id, card => {
+        // 紀錄裡曾經低於面額就視為用過，避免改面額把餘額加回來
+        const unused = card.balance === card.initialAmount && (card.history || []).every(h => h.balance === h.face);
+        applyChange(card, 'face', unused ? face : Math.min(card.balance, face), face);
+      }).then(() => { closeSheet(); toast(`面額已改為 $${face}`); })
+        .catch(() => toast('儲存失敗，請再試一次'));
+    }
+
+    function showHistory(id) {
+      const card = findCard(id);
+      if (!card) return;
+      const history = Array.isArray(card.history) ? card.history : [];
+      const rows = history.map((h, i) => {
+        const faceChanged = i > 0 && h.face !== history[i - 1].face;
+        const note = [h.type === 'create' ? '建檔' : '', faceChanged ? `面額改為 $${h.face}` : ''].filter(Boolean).join('，');
+        return `<div class="histrow"><span class="muted">${h.at ? escapeHTML(new Date(h.at).toLocaleDateString('zh-TW')) : '改版前'}</span>
+          <b>${escapeHTML(money(h.balance))}${note ? `<span class="muted">（${escapeHTML(note)}）</span>` : ''}</b></div>`;
+      }).reverse().join('');
+      openSheet(`<div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div><b>餘額紀錄</b></div></div>
+        <div>${rows || `<p class="muted py-4">目前 ${escapeHTML(money(card.balance))}。尚無紀錄，之後的變動才會記下。</p>`}</div>
+        <button type="button" class="btn" data-act="close">關閉</button>`);
+      sheetButton('close', closeSheet);
     }
 
     function editBalance(id) {
-      const card = allCards.find(c => c.id === id);
+      const card = findCard(id);
       if (!card) return;
-      const newVal = prompt(`修改卡片 (${tailOf(card.barcode)}) 剩餘金額：`, card.balance);
-      if (newVal !== null && !isNaN(newVal) && Number(newVal) >= 0) {
-        card.balance = Number(newVal);
-        card.status = card.balance === 0 ? 'used' : 'active';
-        saveCardToDB(card);
-      }
+      const face = Number(card.initialAmount);
+      const fill = value => `${Math.max(0, Math.min(100, face ? 100 - value / face * 100 : 100))}%`;
+      openSheet(`<div class="row justify-between"><b>改餘額</b><span class="num">${escapeHTML(maskedNo(card.barcode))}</span></div>
+        <div class="fillcard ${faceClass(face)}">${faceImage(face)}<div class="empty"></div><b></b></div>
+        <label class="muted text-center">實際剩餘（面額 ${escapeHTML(face)}）
+          <input class="field text-center text-xl" inputmode="numeric" autocomplete="off"></label>
+        <p class="text-center text-sm" role="alert" style="color:var(--danger)"></p>
+        <div class="row">
+          <button type="button" class="btn flex-1" data-act="zero">用完</button>
+          <button type="button" class="btn flex-1" data-act="close">取消</button>
+          <button type="button" class="btn btn-primary flex-1" data-act="save">儲存</button>
+        </div>`);
+      const sheet = $('sheet');
+      const input = sheet.querySelector('input');
+      const error = sheet.querySelector('[role="alert"]');
+      const valid = () => /^\d+$/.test(input.value) && Number(input.value) <= face;
+      const preview = value => {
+        sheet.querySelector('.empty').style.height = fill(value);
+        sheet.querySelector('.fillcard b').textContent = money(value);
+      };
+      input.value = card.balance;
+      preview(card.balance);
+      input.oninput = () => {
+        error.textContent = valid() ? '' : `請輸入 0 到 ${face} 的整數`;
+        if (valid()) preview(Number(input.value));
+      };
+      sheetButton('zero', () => { input.value = 0; input.oninput(); });
+      sheetButton('close', closeSheet);
+      sheetButton('save', () => {
+        if (!valid()) return input.oninput();
+        const value = Number(input.value);
+        updateCard(id, c => {
+          applyChange(c, 'edit', value);
+          delete c.needsCheck; // 確認過實際餘額即解除待核對
+        }).then(() => { closeSheet(); toast(value ? '已更新餘額' : '已移到「已用完」'); })
+          .catch(() => toast('儲存失敗，請再試一次'));
+      });
+    }
+
+    function askDelete(id) {
+      const card = findCard(id);
+      if (!card) return;
+      openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div>餘額 ${escapeHTML(money(card.balance))}</div></div>
+        <p class="muted">餘額紀錄會一起刪除，無法復原。</p>
+        <button type="button" class="btn" data-act="cancel">取消</button>
+        <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`);
+      sheetButton('cancel', () => { closeSheet(); renderCardList(); });
+      sheetButton('delete', () => {
+        removeCard(id).then(() => { closeSheet(); toast('已刪除'); })
+          .catch(() => toast('刪除失敗，請再試一次'));
+      });
     }
 
     // ===== 首頁文字 =====
@@ -529,6 +887,8 @@
       const period = remindDays();
       $('bell').classList.toggle('due', period > 0 && allCards.length > 0 && (!last || days >= period));
       $('backup-last').textContent = !last ? '尚未備份' : days === 0 ? '今天' : `${days} 天前`;
+      $('settings-backup').textContent = `上次：${$('backup-last').textContent}`;
+      $('settings-due').hidden = !$('bell').classList.contains('due');
       $('remind-days').value = String(period);
     }
 
@@ -550,56 +910,8 @@
       }
     });
 
-    // ===== 手動輸入（不啟動相機） =====
-    let manualAmount = 100; // 0 代表自訂
-
-    function renderAmountChips(containerId, className, selected, onPick) {
-      $(containerId).replaceChildren(...[...FACE_VALUES, 0].map(value => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = className;
-        btn.textContent = value ? `$${value}` : '自訂';
-        btn.setAttribute('aria-pressed', value ? value === selected : !FACE_VALUES.includes(selected));
-        btn.onclick = () => onPick(value);
-        return btn;
-      }));
-    }
-
-    function setManualAmount(value) {
-      manualAmount = value;
-      renderAmountChips('m-amounts', 'chip', value, setManualAmount);
-      $('m-custom').hidden = value !== 0;
-      $('m-custom').required = value === 0;
-    }
-
-    function openManual() {
-      $('manual-form').reset();
-      $('m-status').textContent = '';
-      setManualAmount(manualAmount);
-      showPage('view-manual');
-    }
-
-    function submitManual(event) {
-      event.preventDefault();
-      const status = $('m-status');
-      const barcode = $('m-barcode').value.trim();
-      const face = manualAmount || Number($('m-custom').value);
-      const balance = $('m-balance').value === '' ? face : Number($('m-balance').value);
-
-      if (!SEGMENT_PATTERNS[1].test(barcode)) return status.textContent = '卡號需為 16 碼數字。';
-      if (!Number.isInteger(face) || face <= 0) return status.textContent = '請輸入正確的面額。';
-      if (!Number.isInteger(balance) || balance <= 0 || balance > face) return status.textContent = '餘額需介於 1 與面額之間。';
-      if (allCards.some(c => c.barcode === barcode)) return status.textContent = `尾碼 ${tailOf(barcode)} 的卡片已經建檔過。`;
-
-      saveCardToDB(newCard(barcode, face, balance, null)).then(() => {
-        $('manual-form').reset();
-        setManualAmount(manualAmount);
-        status.textContent = `已新增尾碼 ${tailOf(barcode)}（餘額 $${balance}），待掃描補齊第②段。可繼續輸入。`;
-        $('m-barcode').focus();
-      });
-    }
-
     function newCard(barcode, face, balance, cropImage) {
+      const createdAt = Date.now();
       return {
         id: crypto.randomUUID(),
         barcode,
@@ -607,76 +919,74 @@
         balance,
         status: 'active',
         cropImage,
-        createdAt: Date.now()
+        createdAt,
+        history: [{ at: createdAt, balance, face, type: 'create' }]
       };
     }
 
     // ===== 掃描：兩段齊全才儲存 =====
     const READS_REQUIRED = 3; // 同一段連續讀到相同內容才採用
+    const SWAP_READS = 2;     // 已讀到的段落連續讀到不同內容幾次，視為換卡
     let camera = null;  // { stream, video, timer }
     let cameraRequest = 0;
     let decoder = null;
     let pending;       // 目前這張卡已讀到的段落
     let streaks;
-    let lastSaved = null;
-    let justSaved = []; // 剛存檔的卡還在鏡頭前，不重複提示
+    let justSaved = []; // 剛存檔或剛刪除的卡還在鏡頭前，不重複處理
     let savingScan = false;
     let faceVotes = new Map(); // 目前這張卡各次判讀結果
+    let session = [];  // 本次掃描建的卡 { id, face, barcode, codes }，最新在前
+    const TRASH = '<svg class="ic" style="width:20px;height:20px" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg>';
+    const tail8 = barcode => `${String(barcode).slice(-8, -4)} ${String(barcode).slice(-4)}`;
+    const SCAN_COLORS = { wait: '#60a5fa', ok: '#4ade80', warn: '#fbbf24' };
 
     function emptyPending() {
-      return { 1: null, 2: null, image: null, existing: null };
+      // confirm：兩段都讀到後，要再讀到一次的那一段（確認同一張卡）
+      return { 1: null, 2: null, image: null, confirm: 0 };
     }
 
-    function setPresetAmount(amt) {
-      if (!amt) {
-        const input = Number(prompt('輸入自訂面額：', presetAmount));
-        if (!Number.isInteger(input) || input <= 0) return;
-        amt = input;
-      }
-      presetAmount = amt;
-      renderAmountChips('preset-amounts', 'scan-chip', amt, setPresetAmount);
-      const custom = $('preset-amounts').lastElementChild;
-      if (!FACE_VALUES.includes(amt)) custom.textContent = `自訂 $${amt}`;
-    }
-
-    function setScanStatus(text, warn) {
+    // buzz：需要使用者處理的警示才震動
+    function setScanStatus(text, state = 'wait', buzz = false) {
       const el = $('scan-status');
-      if (warn && el.textContent !== text && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      if (buzz && el.textContent !== text && navigator.vibrate) navigator.vibrate([100, 50, 100]);
       el.textContent = text;
-      el.classList.toggle('text-yellow-300', Boolean(warn));
+      el.style.color = state === 'warn' ? SCAN_COLORS.warn : '';
+      $('scan-dot').style.background = SCAN_COLORS[state];
+    }
+
+    // key：face、1、2
+    function setZone(key, state = '') {
+      const el = $(`zone-${key}`);
+      el.classList.remove('ok', 'warn');
+      if (state) el.classList.add(state);
+      const name = key === 'face' ? '面額' : key === 1 ? '①' : '②';
+      el.firstElementChild.textContent = name + (state === 'ok' ? ' ✓' : state === 'warn' ? ' ！' : '');
     }
 
     function updateScanUI() {
-      for (const seg of [1, 2]) $(`line-${seg}`).classList.toggle('done', Boolean(pending[seg]));
-      const mark = seg => pending[seg] ? `✓ ${tailOf(pending[seg])}` : '未掃';
-      $('scan-progress').textContent = `① ${mark(1)}　② ${mark(2)}${pending.existing ? '（補掃）' : ''}`;
+      setZone(1, pending[1] ? 'ok' : '');
+      setZone(2, pending[2] ? 'ok' : '');
+      setZone('face', (pending[1] || pending[2]) && confirmedFaceValue() ? 'ok' : '');
       $('scan-reset').hidden = !pending[1] && !pending[2];
-      setScanStatus(pending[1] ? '① 完成，讀取 ② 中，保持對準'
-        : pending[2] ? '② 完成，讀取 ① 中，保持對準'
-        : '整張卡背放進框內，兩段條碼對齊紅線');
+      if (pending[1] && !pending[2]) setScanStatus('尚缺 ②，請勿換卡', 'warn');
+      else if (pending[2] && !pending[1]) setScanStatus('尚缺 ①，請勿換卡', 'warn');
+      else setScanStatus('整張卡背放進框內');
     }
 
     function resetPending() {
       pending = emptyPending();
       faceVotes = new Map();
       savingScan = false;
-      $('face-choice').hidden = true;
       streaks = { 1: { value: '', count: 0 }, 2: { value: '', count: 0 } };
       updateScanUI();
     }
 
     function openScanner() {
-      scanSessionCount = 0;
-      lastSaved = null;
+      session = [];
       justSaved = [];
-      savingScan = false;
-      $('scan-session-count').innerText = `本次已掃: 0`;
-      $('scan-last').hidden = true;
-      $('manual-barcode').value = '';
       $('view-scanner').classList.remove('hidden');
-      setPresetAmount(presetAmount);
       resetPending();
-
+      renderSession();
       startCamera();
     }
 
@@ -712,6 +1022,7 @@
     }
 
     function closeScanner() {
+      closeSheet();
       stopCamera();
       $('view-scanner').classList.add('hidden');
     }
@@ -804,18 +1115,22 @@
     const OFFSETS = [-0.05, 0.05, -0.1, 0.1];
     let offsetTurn = 0;
 
-    // 尚未讀到的段落：先讀紅線本身，再輪流試上下偏移
+    // 尚未讀到的段落：先讀導引線本身，再輪流試上下偏移。
+    // 已讀到的段落也持續讀，內容一變代表換了卡。
     function scanPositions() {
-      const missing = [1, 2].filter(seg => !pending[seg]);
       const offset = OFFSETS[offsetTurn++ % OFFSETS.length];
-      return [...missing.map(seg => LINE_AT[seg]), ...missing.map(seg => LINE_AT[seg] + offset)];
+      if (pending.confirm) return [LINE_AT[pending.confirm], LINE_AT[pending.confirm] + offset];
+      const missing = [1, 2].filter(seg => !pending[seg]);
+      const done = [1, 2].filter(seg => pending[seg]);
+      return [...missing.map(seg => LINE_AT[seg]), ...done.map(seg => LINE_AT[seg]), ...missing.map(seg => LINE_AT[seg] + offset)];
     }
 
     async function decodeLoop(request) {
       // formatsToSupport 屬於建構子選項
       decoder = decoder || new Html5Qrcode('decode-area', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128], verbose: false });
       if (request !== cameraRequest || !camera) return;
-      if (camera.video.videoWidth) {
+      // 面板開著時暫停辨識與存檔
+      if (camera.video.videoWidth && $('shade').hidden) {
         for (const at of scanPositions()) {
           if ((pending[1] || pending[2]) && !savingScan) sampleFaceValue();
           const text = await decodeBand(camera.video, at);
@@ -849,112 +1164,161 @@
     }
 
     function onScanSuccess(decodedText) {
-      if (savingScan || justSaved.includes(decodedText)) return;
+      if (savingScan || !$('shade').hidden || justSaved.includes(decodedText)) return;
       const segment = segmentOf(decodedText);
-      if (!segment) return setScanStatus('這不是商品卡的條碼', true);
+      if (!segment) return setScanStatus('這不是商品卡的條碼', 'warn', true);
 
       const streak = streaks[segment];
       streak.count = streak.value === decodedText ? streak.count + 1 : 1;
       streak.value = decodedText;
+
+      if (pending[segment]) {
+        if (pending[segment] === decodedText) {
+          if (pending.confirm === segment) {
+            pending.confirm = 0;
+            finishCard();
+          }
+        } else if (streak.count >= SWAP_READS) {
+          resetPending();
+          setScanStatus('偵測到換卡，已清除，請重新對準', 'warn', true);
+        }
+        return;
+      }
       if (streak.count >= READS_REQUIRED) acceptSegment(segment, decodedText);
     }
 
     function acceptSegment(segment, value) {
-      if (savingScan || pending[segment] === value) return;
-      if (pending[segment]) return setScanStatus(`讀到另一張卡的第 ${segment} 段。要換卡請按「重掃這張」`, true);
+      if (savingScan || pending[segment]) return;
 
       const found = allCards.find(c => c.barcode === value || c.barcode2 === value);
       if (found) {
-        // 只有「①相符的待補掃卡」可以補掃，其餘視為重複
-        if (isComplete(found) || segment !== 1 || found.barcode !== value) {
-          return setScanStatus(`尾碼 ${tailOf(found.barcode)} 的卡片已經建檔過`, true);
-        }
-        pending.existing = found;
+        setZone(segment, 'warn');
+        return setScanStatus(`已存在，未新增・${tail8(found.barcode)}`, 'warn', true);
       }
 
       if (!pending[1] && !pending[2]) faceVotes = new Map(); // 丟掉上一張卡的殘留判讀
       pending[segment] = value;
       if (segment === 1) pending.image = captureCroppedCardImage();
       sampleFaceValue();
-
       if (navigator.vibrate) navigator.vibrate(60);
-      const guideBox = $('guide-box');
-      guideBox.classList.replace('border-emerald-400', 'border-yellow-300');
-      setTimeout(() => guideBox.classList.replace('border-yellow-300', 'border-emerald-400'), 300);
 
-      if (pending[1] && pending[2]) finishCard();
-      else updateScanUI();
-    }
-
-    // 面額：判讀與預選一致→存；不一致→讓使用者選；判不出→用預選並標示未核對
-    function finishCard() {
-      if (pending.existing) return savePending(pending.existing.initialAmount, '');
-      const detected = confirmedFaceValue();
-      if (!detected) return savePending(presetAmount, '（面額未核對）');
-      if (detected === presetAmount) return savePending(detected, '（面額已核對）');
-
-      savingScan = true; // 等使用者選擇前不再讀取
       updateScanUI();
-      setScanStatus(`面額不一致：卡面讀到 $${detected}，預選 $${presetAmount}`, true);
-      const choose = (value, note) => {
-        $('face-choice').hidden = true;
-        savePending(value, note);
-      };
-      $('face-detected').textContent = `用卡面 $${detected}`;
-      $('face-detected').onclick = () => choose(detected, '（依卡面）');
-      const preset = presetAmount;
-      $('face-preset').textContent = `用預選 $${preset}`;
-      $('face-preset').onclick = () => choose(preset, '（依預選）');
-      $('face-choice').hidden = false;
-      $('scan-reset').hidden = false;
+      if (pending[1] && pending[2]) {
+        pending.confirm = segment === 1 ? 2 : 1;
+        setScanStatus('確認是否同一張卡，請保持對準', 'ok');
+      }
     }
 
-    function savePending(face, note) {
-      savingScan = true;
-      const { existing, image } = pending;
-      const values = [pending[1], pending[2]];
-      const card = existing
-        ? { ...existing, barcode2: pending[2], cropImage: image || existing.cropImage }
-        : { ...newCard(pending[1], face, face, image), barcode2: pending[2] };
+    const FACE_WAIT_MS = 2400; // 讀不到面額時，等這麼久才詢問
 
-      saveCardToDB(card).then(() => {
-        lastSaved = { card, previous: existing ? { ...existing } : null };
-        justSaved = values;
-        scanSessionCount++;
-        $('scan-session-count').innerText = `本次已掃: ${scanSessionCount}`;
-        $('scan-last').hidden = false;
-        $('scan-last-img').hidden = !card.cropImage;
-        if (card.cropImage) $('scan-last-img').src = card.cropImage;
-        $('scan-last-text').textContent = `${existing ? '已補掃' : '已存'} ${tailOf(card.barcode)}　面額 $${card.initialAmount}${note}`;
+    // 面額一律採用卡面判讀值；讀不到才詢問
+    async function finishCard() {
+      savingScan = true; // 決定面額期間不再讀取條碼
+      const current = pending;
+      setScanStatus('兩段齊全，確認面額中', 'ok');
+      const deadline = Date.now() + FACE_WAIT_MS;
+      while (!confirmedFaceValue() && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (pending !== current || $('view-scanner').classList.contains('hidden')) return;
+        sampleFaceValue();
+      }
+
+      const detected = confirmedFaceValue();
+      if (detected) return savePending(detected);
+
+      setZone('face', 'warn');
+      setScanStatus('讀不到面額，請點選', 'warn', true);
+      askScanFace(current);
+    }
+
+    function askScanFace(current) {
+      const cancel = () => { closeSheet(); resetPending(); };
+      openSheet(`<b>這張卡的面額是？</b><p class="muted">辨識已暫停</p>
+        <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>
+        <button type="button" class="btn" data-act="retry">重掃這張</button>`, cancel);
+      $('sheet').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => {
+        closeSheet();
+        if (pending === current) savePending(Number(btn.dataset.value));
+      });
+      sheetButton('retry', cancel);
+    }
+
+    function savePending(face) {
+      savingScan = true;
+      const current = pending;
+      const codes = [current[1], current[2]];
+      const card = { ...newCard(current[1], face, face, current.image), barcode2: current[2] };
+
+      return addCard(card).then(() => {
+        session.unshift({ id: card.id, face, barcode: card.barcode, codes });
+        justSaved = codes;
         resetPending();
+        setZone('face', 'ok'); setZone(1, 'ok'); setZone(2, 'ok');
+        $('guide-box').classList.add('saved');
+        setTimeout(() => $('guide-box').classList.remove('saved'), 600);
+        setScanStatus('已新增，換下一張', 'ok');
+        renderSession(face);
       }).catch(() => {
         resetPending();
-        setScanStatus('儲存失敗，請重掃這張', true);
+        setScanStatus('儲存失敗，請重掃這張', 'warn', true);
       });
     }
 
-    function undoLastScan() {
-      if (!lastSaved) return;
-      const { card, previous } = lastSaved;
-      lastSaved = null;
-      $('scan-last').hidden = true;
-      const undone = previous ? saveCardToDB(previous) : removeCard(card.id);
-      undone.then(() => {
-        scanSessionCount--;
-        $('scan-session-count').innerText = `本次已掃: ${scanSessionCount}`;
-        setScanStatus('已撤回上一張');
-        setTimeout(() => justSaved = [], 4000); // 讓使用者先移開卡片
-      }).catch(() => setScanStatus('撤回失敗，請到卡片管理確認', true));
+    // ----- 本次清單：最新一張＋依面額分組 -----
+    function renderSession(bumpFace = 0) {
+      const total = session.reduce((sum, c) => sum + c.face, 0);
+      $('scan-total').textContent = `本次 ${session.length} 張・${money(total)}`;
+
+      const last = session[0];
+      $('scan-latest').innerHTML = last ? `<span style="color:#9ca3af">最新</span>
+        <b class="text-lg ${faceClass(last.face)}" style="color:var(--tone)">$${last.face}</b>
+        <span class="num">${escapeHTML(tail8(last.barcode))}</span>
+        <button type="button" class="trash" aria-label="刪除最新一張">${TRASH}</button>` : '';
+      if (last) $('scan-latest').querySelector('.trash').onclick = () => askRemoveScanned(last.id);
+
+      $('scan-groups').innerHTML = FACE_VALUES.filter(v => session.some(c => c.face === v)).map(value => {
+        const list = session.filter(c => c.face === value);
+        return `<button type="button" class="grp ${value === bumpFace ? 'bump' : ''}" data-value="${value}">${miniCard(value)}
+          <b class="text-lg w-12">× ${list.length}</b><span class="num flex-1">${escapeHTML(tail8(list[0].barcode))}</span>
+          <span class="text-xs" style="color:#9ca3af">檢視 ›</span></button>`;
+      }).join('') || '<p class="text-sm text-center pt-5" style="color:#9ca3af">掃描成功的卡會依面額出現在這裡</p>';
+      $('scan-groups').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => viewScanGroup(Number(btn.dataset.value)));
     }
 
-    // ①反光時手動輸入，再掃 ② 完成
-    function manualSegment() {
-      const input = $('manual-barcode');
-      const code = input.value.trim();
-      if (!SEGMENT_PATTERNS[1].test(code)) return setScanStatus('① 需為 16 碼數字', true);
-      input.value = '';
-      justSaved = [];
-      acceptSegment(1, code);
+    function viewScanGroup(value) {
+      if (savingScan) return;
+      const list = session.filter(c => c.face === value);
+      if (!list.length) return closeSheet();
+      openSheet(`<div class="row justify-between"><b>$${value}・本次 ${list.length} 張</b><button type="button" class="btn" data-act="close">關閉</button></div>
+        <p class="muted">辨識已暫停</p>
+        ${list.map(c => `<div class="sheet-row">${miniCard(value)}<span class="num">${escapeHTML(tail8(c.barcode))}</span>${c === session[0] ? '<span class="muted">最新</span>' : ''}
+          <button type="button" class="trash" data-del="${escapeHTML(c.id)}" aria-label="刪除末碼 ${escapeHTML(tail8(c.barcode))}">${TRASH}</button></div>`).join('')}`);
+      sheetButton('close', closeSheet);
+      $('sheet').querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => askRemoveScanned(btn.dataset.del, value));
+    }
+
+    // fromFace：由分組視窗開啟時，結束後回到該組
+    function askRemoveScanned(id, fromFace = 0) {
+      if (savingScan) return;
+      const entry = session.find(c => c.id === id);
+      if (!entry) return;
+      openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(tail8(entry.barcode))}</div>面額 $${entry.face}</div></div>
+        <p class="muted">辨識已暫停。刪除後可重新掃描。</p>
+        <button type="button" class="btn" data-act="cancel">取消</button>
+        <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`);
+      sheetButton('cancel', () => fromFace ? viewScanGroup(fromFace) : closeSheet());
+      sheetButton('delete', () => {
+        removeCard(id).then(() => {
+          session = session.filter(c => c.id !== id);
+          justSaved = entry.codes;
+          setTimeout(() => { if (justSaved === entry.codes) justSaved = []; }, 4000); // 讓使用者先移開卡片
+          closeSheet();
+          resetPending();
+          setScanStatus('已刪除');
+          renderSession();
+          if (fromFace) viewScanGroup(fromFace);
+        }).catch(() => toast('刪除失敗，請再試一次'));
+      });
     }
 
     // ===== 左上紅字面額判讀 =====
@@ -1169,17 +1533,19 @@
       // 回到已核銷的卡再按一次時，只換下一張，不重複計數
       let saved = Promise.resolve();
       if (card.status !== 'used') {
-        sessionUsedAmount += Number(card.balance);
-        sessionUsedCount++;
-
-        card.balance = 0;
-        card.status = 'used';
-        saved = saveCardToDB(card);
+        const amount = Number(card.balance);
+        saved = updateCard(card.id, c => applyChange(c, 'pay', 0)).then(() => {
+          sessionUsedAmount += amount;
+          sessionUsedCount++;
+          card.balance = 0;
+          card.status = 'used';
+        });
       }
       saved.then(() => {
         checkoutIndex++;
         renderCheckoutCard();
-      }).finally(() => setTimeout(() => setCheckoutBusy(false), MARK_COOLDOWN_MS));
+      }).catch(() => alert('儲存失敗，請再試一次'))
+        .finally(() => setTimeout(() => setCheckoutBusy(false), MARK_COOLDOWN_MS));
     }
 
     // ===== 備份與還原 =====
@@ -1195,33 +1561,154 @@
       renderBell();
     }
 
+    const MAX_IMAGE_CHARS = 2800000; // 約 2 MB 圖片的 base64 長度
+    const HISTORY_TYPES = ['create', 'edit', 'face', 'pay', 'before'];
+    const isAmount = v => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+    const isCode = v => typeof v === 'string' && v.length > 0 && v.length <= 64;
+
+    // 嚴重錯誤丟例外（整檔不匯入）；小問題就地修正並計數
+    function parseBackup(text) {
+      let data;
+      try { data = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) { throw new Error('不是有效的備份檔'); }
+      if (!Array.isArray(data)) throw new Error('不是有效的備份檔');
+
+      const ids = new Set(), codes = new Set();
+      let fixed = 0;
+      const cards = data.map((item, index) => {
+        const fail = reason => { throw new Error(`第 ${index + 1} 筆${reason}`); };
+        if (!item || typeof item !== 'object' || Array.isArray(item)) fail('格式錯誤');
+        if (typeof item.id !== 'string' || !item.id) fail('缺少識別碼');
+        if (!isCode(item.barcode)) fail('缺少卡號');
+        if (item.barcode2 != null && item.barcode2 !== '' && !isCode(item.barcode2)) fail('第②段格式錯誤');
+        if (!isAmount(item.initialAmount) || !isAmount(item.balance)) fail('金額錯誤');
+        if (ids.has(item.id)) fail('與其他筆重複');
+        ids.add(item.id);
+        for (const code of [item.barcode, item.barcode2].filter(Boolean)) {
+          if (codes.has(code)) fail('的卡號與其他筆重複');
+          codes.add(code);
+        }
+
+        // 只保留已知欄位
+        const card = {
+          id: item.id,
+          barcode: item.barcode,
+          initialAmount: item.initialAmount,
+          balance: item.balance,
+          status: item.balance > 0 ? 'active' : 'used',
+          cropImage: null,
+          createdAt: isAmount(item.createdAt) ? item.createdAt : Date.now() + index
+        };
+        if (item.barcode2) card.barcode2 = item.barcode2;
+        if (item.cropImage) {
+          // 只接受內嵌圖片，避免顯示時向外部網址發出請求
+          if (typeof item.cropImage === 'string' && item.cropImage.startsWith('data:image/') && item.cropImage.length <= MAX_IMAGE_CHARS) card.cropImage = item.cropImage;
+          else fixed++;
+        }
+        if (item.history != null) {
+          const ok = Array.isArray(item.history) && item.history.every(h => h && typeof h === 'object'
+            && (h.at === null || isAmount(h.at)) && isAmount(h.balance) && isAmount(h.face) && HISTORY_TYPES.includes(h.type));
+          if (ok) card.history = item.history.map(({ at, balance, face, type }) => ({ at, balance, face, type }));
+          else fixed++;
+        }
+        if (item.needsCheck === true || item.balance > item.initialAmount) card.needsCheck = true;
+        return card;
+      });
+      return { cards, fixed };
+    }
+
+    // 依 id、①、② 比對現有卡片
+    function planImport(imported, existing) {
+      const used = new Set();
+      return imported.map(card => {
+        const codes = [card.barcode, card.barcode2].filter(Boolean);
+        const matches = existing.filter(c => c.id === card.id || codes.includes(c.barcode) || codes.includes(c.barcode2));
+        if (matches.length > 1 || (matches[0] && used.has(matches[0].id))) throw new Error('備份與現有卡片的對應不明確（卡號互相重疊）');
+        const current = matches[0] || null;
+        if (current) used.add(current.id);
+        const same = current && current.barcode === card.barcode && current.balance === card.balance
+          && current.initialAmount === card.initialAmount && (!card.barcode2 || !current.barcode2 || card.barcode2 === current.barcode2);
+        return { card, current, kind: !current ? 'new' : same ? 'same' : 'diff' };
+      });
+    }
+
+    // 整批在單一 transaction 寫入；任何一筆失敗就全部不寫
+    function applyImport(imported, overwrite) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        let failure = null;
+        const request = store.getAll();
+        request.onsuccess = () => {
+          try {
+            for (const { card, current, kind } of planImport(imported, request.result)) {
+              if (kind === 'new') { store.put(card); continue; }
+              if (kind === 'diff' && overwrite) {
+                const merged = {
+                  ...card,
+                  id: current.id,
+                  createdAt: current.createdAt,
+                  barcode2: card.barcode2 || current.barcode2,
+                  cropImage: card.cropImage || current.cropImage
+                };
+                if (!card.history) {
+                  // 備份沒有紀錄時保留現有紀錄，並記下這次覆蓋
+                  const base = { ...current };
+                  applyChange(base, 'edit', card.balance, card.initialAmount);
+                  if (base.history) merged.history = base.history;
+                }
+                store.put(merged);
+                continue;
+              }
+              // 保留現有：只補上現有缺少的②與照片
+              const addCode = !current.barcode2 && card.barcode2;
+              const addImage = !current.cropImage && card.cropImage;
+              if (addCode || addImage) {
+                store.put({ ...current, ...(addCode ? { barcode2: card.barcode2 } : {}), ...(addImage ? { cropImage: card.cropImage } : {}) });
+              }
+            }
+          } catch (e) {
+            failure = e;
+            tx.abort();
+          }
+        };
+        tx.oncomplete = () => loadCards().then(resolve);
+        tx.onabort = () => { loadCards(); reject(failure || tx.error); };
+      });
+    }
+
+    function runImport(cards, overwrite) {
+      applyImport(cards, overwrite)
+        .then(() => { closeSheet(); toast('匯入完成'); })
+        .catch(() => { closeSheet(); alert('匯入失敗，沒有寫入任何資料。'); });
+    }
+
     function importData(event) {
       const input = event.target;
       const file = input.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (!Array.isArray(imported)) throw new Error('格式錯誤');
-          let removedImages = 0;
-          for (const card of imported) {
-            // 只接受內嵌圖片，避免顯示時向外部網址發出請求
-            if (card.cropImage && !String(card.cropImage).startsWith('data:image/')) {
-              card.cropImage = null;
-              removedImages++;
-            }
-            const current = allCards.find(c => c.id === card.id);
-            if (current && isComplete(current) && !isComplete(card) && current.barcode === card.barcode) {
-              card.barcode2 = current.barcode2;
-            }
-            await saveCardToDB(card);
-          }
-          alert(`成功匯入 ${imported.length} 張卡片資料！` + (removedImages ? `\n其中 ${removedImages} 張的圖片格式不符，未匯入圖片。` : ''));
-        } catch (err) {
-          alert('匯入失敗：檔案格式不正確');
-        }
+      reader.onload = async e => {
         input.value = ''; // 讓同一個檔案可以再選一次
+        try {
+          const { cards, fixed } = parseBackup(e.target.result);
+          await loadCards();
+          const plan = planImport(cards, allCards);
+          const count = kind => plan.filter(p => p.kind === kind).length;
+          const overCount = cards.filter(c => c.needsCheck).length;
+          openSheet(`<b>匯入備份</b>
+            <p>新增 ${count('new')} 張・相同 ${count('same')} 張・內容不同 ${count('diff')} 張</p>
+            ${fixed ? `<p class="muted">${fixed} 處圖片或紀錄格式不符，不匯入該部分。</p>` : ''}
+            ${overCount ? `<p class="muted">備份中有 ${overCount} 張需要核對餘額。</p>` : ''}
+            ${count('diff') ? '<p class="muted">內容不同的卡預設保留手機裡現有的。</p>' : ''}
+            <button type="button" class="btn btn-primary" data-act="keep">${count('diff') ? '匯入（保留現有）' : '匯入'}</button>
+            ${count('diff') ? `<button type="button" class="btn btn-fill-danger" data-act="over">用備份覆蓋 ${count('diff')} 張</button>` : ''}
+            <button type="button" class="btn" data-act="cancel">取消</button>`);
+          sheetButton('keep', () => runImport(cards, false));
+          if (count('diff')) sheetButton('over', () => runImport(cards, true));
+          sheetButton('cancel', closeSheet);
+        } catch (err) {
+          alert(`匯入失敗：${err.message}。沒有寫入任何資料。`);
+        }
       };
       reader.readAsText(file);
     }
