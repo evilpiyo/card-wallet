@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>7-11 商品卡管家</title>
+  <title>小七商品卡管家</title>
+  <meta name="apple-mobile-web-app-title" content="小七卡管家">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="manifest" href="manifest.json">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="vendor/tailwindcss-3.4.17.js"></script>
+  <script src="vendor/html5-qrcode-2.3.8.min.js"></script>
+  <script src="vendor/jsbarcode-3.11.6.min.js"></script>
   <style>
     /* ===== Theme token：新增主題時，加一組 [data-theme="名稱"] 覆寫即可 ===== */
     :root {
@@ -238,7 +241,7 @@
   <main id="view-home" class="page">
     <div class="page-body">
       <div class="flex justify-between items-center gap-3">
-        <h1 class="editable page-title" contenteditable="plaintext-only" data-key="cv-title" data-default="7-11商品卡匣" aria-label="首頁標題"></h1>
+        <h1 class="editable page-title" contenteditable="plaintext-only" data-key="cv-title" data-default="小七商品卡匣" aria-label="首頁標題"></h1>
         <button class="bell" id="bell" onclick="toggleBackupPopover()" aria-label="備份提醒" aria-expanded="false">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8"/><path d="M10 21h4"/></svg>
         </button>
@@ -248,6 +251,7 @@
         <p class="total" id="total-balance">$0</p>
       </div>
       <div class="cards" id="denominations"></div>
+      <button type="button" class="home-check" id="home-update" onclick="applyUpdate()" hidden>有新版本，點此更新</button>
       <button type="button" class="home-check" id="home-pending" onclick="openPay()" hidden>有一筆付款尚未完成</button>
       <button type="button" class="home-check" id="home-check" onclick="openCards()" hidden></button>
       <div class="home-empty" id="home-empty" hidden></div>
@@ -281,6 +285,7 @@
       </div>
       <div class="group">
         <button type="button" onclick="showPage('view-text')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3"/></svg>首頁文字</button>
+        <button type="button" id="install-row" onclick="showInstallGuide()"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 8v7M8.5 11.5h7"/></svg>加入主畫面</button>
       </div>
       <div class="group">
         <button type="button" onclick="exportData()"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="flex-1">備份<br><span class="muted" id="settings-backup"></span></span><span class="badge" id="settings-due" hidden>該備份了</span></button>
@@ -370,6 +375,7 @@
     let db;
     let allCards = [];
     let payment = null;
+    let waitingWorker = null; // 已下載、等待套用的新版本
     let cardTab = 'active';
     let cardFace = 0;      // 0＝全部
     let showNumbers = false;
@@ -534,6 +540,7 @@
       $('btn-pay').disabled = cards.length === 0 && !payment;
       $('btn-pay').textContent = payment ? '繼續付款' : '付款';
       $('home-pending').hidden = !payment;
+      $('home-update').hidden = !waitingWorker || Boolean(payment); // 付款中不提示換版
       const toCheck = activeCards().filter(c => c.needsCheck).length;
       $('home-check').hidden = toCheck === 0;
       $('home-check').textContent = `${toCheck} 張待核對，未計入`;
@@ -2232,8 +2239,61 @@
       reader.readAsText(file);
     }
 
+    // ===== 離線與更新 =====
+    let updating = false;
+
+    function watchWorker(registration) {
+      const check = () => {
+        // 沒有 controller 代表第一次安裝，不算更新
+        if (!registration.waiting || !navigator.serviceWorker.controller) return;
+        waitingWorker = registration.waiting;
+        if (db) renderHome();
+      };
+      check();
+      registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', check));
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) registration.update().catch(() => {});
+      });
+    }
+
+    async function applyUpdate() {
+      await loadCards();
+      if (payment || !waitingWorker) return;
+      if (waitingWorker.state !== 'installed') return location.reload(); // 已由另一個分頁套用
+      updating = true;
+      waitingWorker.postMessage('skip');
+    }
+
+    function startOffline() {
+      // 請瀏覽器保留資料（不保證同意，仍須備份）
+      navigator.storage?.persist?.().catch(() => {});
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (updating) location.reload();
+      });
+      navigator.serviceWorker.register('sw.js').then(watchWorker).catch(() => {});
+    }
+
+    // ===== 加入主畫面說明 =====
+    const isStandalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+
+    function showInstallGuide() {
+      openSheet(`<b>加入主畫面</b>
+        <p class="muted">主畫面版和瀏覽器各存一份資料，圖示第一次打開是空的。</p>
+        <ol class="list-decimal pl-5 space-y-2 text-sm">
+          <li>先按下面的「備份」，確認檔案存好。</li>
+          <li>iPhone：Safari 的分享鈕 →「加入主畫面」（有「以網頁 App 開啟」就打開）。Android：Chrome 選單 →「加到主畫面」。</li>
+          <li>從主畫面圖示打開 → 設定 → 還原，核對張數與餘額。</li>
+          <li><b>之後只用圖示開啟</b>。兩邊餘額不會同步，兩邊都用會重複扣款或算錯。</li>
+        </ol>
+        <button type="button" class="btn btn-primary" data-act="backup">備份</button>`);
+      sheetButton('backup', exportData);
+    }
+
+    $('install-row').hidden = isStandalone();
     showQuote();
     initDB();
+    startOffline();
   </script>
 </body>
 </html>

@@ -1,0 +1,16 @@
+第三方函式庫（原樣下載，未修改），供離線使用。
+
+tailwindcss-3.4.17.js
+  Tailwind CSS Play CDN 3.4.17，MIT License，Copyright (c) Tailwind Labs, Inc.
+  https://cdn.tailwindcss.com/3.4.17
+  https://github.com/tailwindlabs/tailwindcss/blob/v3.4.17/LICENSE
+
+html5-qrcode-2.3.8.min.js
+  html5-qrcode 2.3.8，Apache License 2.0，Copyright (c) Minhaz
+  https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js
+  https://github.com/mebjas/html5-qrcode/blob/v2.3.8/LICENSE
+
+jsbarcode-3.11.6.min.js
+  JsBarcode 3.11.6，MIT License，Copyright (c) Johan Lindell
+  https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js
+  https://github.com/lindell/JsBarcode/blob/v3.11.6/MIT-LICENSE.txt
