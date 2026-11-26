@@ -146,6 +146,8 @@
     .z b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); white-space: nowrap; border-radius: 99px; padding: 1px 7px; font-size: 11px; background: rgb(var(--c)); color: #111; }
     @keyframes breathe { 50% { box-shadow: 0 0 3px rgba(var(--c),.12), 0 0 8px rgba(var(--c),.06); } }
     @media (prefers-reduced-motion: reduce) { .z { animation: none; } }
+    .scan-drop { color: #fca5a5; }
+    .scan-drop.off { visibility: hidden; }
     .scanbar { flex: none; padding: 8px 16px 6px; border-bottom: 1px solid #374151; min-height: 74px; }
     .scan-status { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; font-weight: 700; }
     #scan-status, #scan-dot { transition: opacity 1s; }
@@ -263,6 +265,7 @@
     <div class="scan-top">
       <button type="button" class="dark" onclick="closeScanner()">✕ 完成</button>
       <b id="scan-total"></b>
+      <button type="button" class="dark scan-drop" id="scan-drop" onclick="askDropSession()">放棄本次</button>
     </div>
 
     <div class="cam">
@@ -753,11 +756,9 @@
       const hasImage = String(card.cropImage || '').startsWith('data:image/');
       openSheet(`<div class="row justify-between"><span class="num">${escapeHTML(maskedNo(card.barcode))}</span><b>面額 $${escapeHTML(card.initialAmount)}</b></div>
         ${hasImage ? '<img class="photo" alt="卡背原圖">' : '<p class="muted text-center py-10">沒有原圖</p>'}
-        <button type="button" class="btn" data-act="face">改面額（判讀錯誤時）</button>
-        <button type="button" class="btn" data-act="close">關閉</button>`);
+        <button type="button" class="btn" data-act="face">改面額（判讀錯誤時）</button>`);
       if (hasImage) $('sheet').querySelector('.photo').src = card.cropImage;
       sheetButton('face', () => askFaceChange(id));
-      sheetButton('close', closeSheet);
     }
 
     function askFaceChange(id) {
@@ -790,9 +791,7 @@
           <b>${escapeHTML(money(h.balance))}${note ? `<span class="muted">（${escapeHTML(note)}）</span>` : ''}</b></div>`;
       }).reverse().join('');
       openSheet(`<div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div><b>餘額紀錄</b></div></div>
-        <div>${rows || `<p class="muted py-4">目前 ${escapeHTML(money(card.balance))}。尚無紀錄，之後的變動才會記下。</p>`}</div>
-        <button type="button" class="btn" data-act="close">關閉</button>`);
-      sheetButton('close', closeSheet);
+        <div>${rows || `<p class="muted py-4">目前 ${escapeHTML(money(card.balance))}。尚無紀錄，之後的變動才會記下。</p>`}</div>`);
     }
 
     function editBalance(id) {
@@ -1337,17 +1336,38 @@
       openSheet(`<div class="row justify-between"><span class="num">${escapeHTML(fullNo(entry.barcode))}</span><b>面額 $${entry.face}</b></div>
         ${hasImage ? '<img class="photo" alt="卡背原圖">' : '<p class="muted text-center py-10">沒有原圖</p>'}
         <p class="muted">辨識已暫停</p>
-        <button type="button" class="btn" style="color:var(--danger)" data-act="redo">刪除重掃</button>
-        <button type="button" class="btn" data-act="close">關閉</button>`, back);
+        <button type="button" class="btn" style="color:var(--danger)" data-act="redo">刪除重掃</button>`, back);
       if (hasImage) $('sheet').querySelector('.photo').src = image;
       sheetButton('redo', () => askRemoveScanned(id, fromFace, () => viewScanPhoto(id, fromFace), true));
-      sheetButton('close', back);
+    }
+
+    // 放棄本次：刪除這次掃描新增的卡並離開掃描頁
+    function askDropSession() {
+      if (!session.length) return;
+      resetPending(); // 讀到一半的卡一併丟掉，避免面板開著時在背後存檔
+      const total = session.reduce((sum, c) => sum + c.face, 0);
+      openSheet(`<b>放棄本次掃描？</b>
+        <p>本次新增的 <b>${session.length} 張・${money(total)}</b> 會刪除。</p>
+        <p class="muted">辨識已暫停。原本就有的卡不受影響。</p>
+        <button type="button" class="btn" data-act="cancel">取消</button>
+        <button type="button" class="btn btn-fill-danger" data-act="drop">放棄並刪除</button>`);
+      sheetButton('cancel', closeSheet);
+      sheetButton('drop', () => {
+        const ids = session.map(c => c.id);
+        // 同一個 transaction：全部刪除或全部保留
+        writeStore(store => ids.forEach(id => store.delete(id))).then(() => {
+          session = [];
+          closeScanner();
+          toast(`已放棄本次掃描，刪除 ${ids.length} 張`);
+        }).catch(() => toast('刪除失敗，請再試一次'));
+      });
     }
 
     // ----- 本次清單：最新一張＋依面額分組 -----
     function renderSession(bumpFace = 0) {
       const total = session.reduce((sum, c) => sum + c.face, 0);
       $('scan-total').textContent = `本次 ${session.length} 張・${money(total)}`;
+      $('scan-drop').classList.toggle('off', !session.length); // 保留位置，張數文字不跳動
 
       const last = session[0];
       $('scan-latest').innerHTML = last ? `<span style="color:#9ca3af">最新</span>
