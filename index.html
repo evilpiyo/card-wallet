@@ -1582,12 +1582,13 @@
     const paidByCards = record => record.items.reduce((sum, i) => sum + (i.done ? i.use : 0), 0);
     const remaining = record => record.bill - record.other - paidByCards(record);
 
-    // 依餘額由少到多（同額舊的先）配到足額
+    // 有餘額剛好等於應扣金額的卡就只用那張；否則依餘額由少到多（同額舊的先）配到足額
     function allocate(list, need, exclude = []) {
       const items = [];
       const pool = list.filter(c => c.status === 'active' && c.balance > 0 && isComplete(c) && !c.needsCheck && !exclude.includes(c.id))
         .sort((a, b) => a.balance - b.balance || a.createdAt - b.createdAt);
-      for (const card of pool) {
+      const exact = need > 0 && pool.find(c => c.balance === need);
+      for (const card of exact ? [exact] : pool) {
         if (need <= 0) break;
         const use = Math.min(card.balance, need);
         items.push({ cardId: card.id, use, before: card.balance, done: false, order: 0 });
