@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="default">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>7-11 商品卡管家</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    /* ===== Theme token：新增主題時，加一組 [data-theme="名稱"] 覆寫即可 ===== */
+    :root {
+      --bg: #f6f4ef; --surface: #ffffff; --text: #1d1d1b; --muted: #6f6c65; --line: #e6e2d9;
+      --action: #1f6f54; --on-action: #ffffff; --danger: #c0271c; --warn: #9a5b00;
+    }
+
+    /* ===== 元件（顏色只用 token；Tailwind 僅管排版） ===== */
+    [hidden] { display: none !important; }
+    body { background: var(--bg); color: var(--text); }
+
+    .page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); max-width: 28rem; margin: 0 auto; }
+    .page-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px 12px; display: flex; flex-direction: column; gap: 14px; }
+    .page-bar { display: flex; gap: 12px; padding: 10px 20px calc(16px + env(safe-area-inset-bottom)); }
+    #view-home { z-index: 10; }
+    .sub-page { z-index: 20; }
+
+    .btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 14px; padding: 12px 16px; cursor: pointer; }
+    .btn:disabled { opacity: .35; cursor: default; }
+    .btn-primary { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; }
+    .btn-danger { color: var(--danger); }
+    .btn-menu { text-align: left; padding: 16px; display: block; width: 100%; }
+    .chip { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 99px; padding: 7px 14px; font-size: 14px; cursor: pointer; }
+    .chip[aria-pressed="true"] { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; }
+    .field { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 12px; padding: 12px; font-size: 16px; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .page-title { font-size: 20px; font-weight: 700; }
+
+    /* 首頁 */
+    .editable { user-select: text; -webkit-user-select: text; border: 1px dashed transparent; border-radius: 6px; outline: 0; width: fit-content; max-width: 100%; min-width: 2em; white-space: nowrap; overflow: hidden; cursor: text; }
+    .editable:focus { border-color: var(--muted); }
+    .total { font-size: 60px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; }
+    .bell { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
+    .bell.due::after { content: ""; position: absolute; top: 6px; right: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); border: 2px solid var(--surface); }
+    .popover { position: absolute; top: 66px; right: 16px; width: 230px; z-index: 5; display: flex; flex-direction: column; gap: 10px; font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+    .quote { margin-top: auto; text-align: center; font-size: 15px; color: var(--muted); line-height: 1.5; padding: 0 8px; }
+    .pay { flex: 1; height: 58px; font-size: 20px; border-radius: 16px; }
+    .set { width: 84px; height: 58px; border-radius: 16px; }
+
+    /* 迷你卡面：顏色代表面額，不隨主題改變 */
+    .cards { display: flex; flex-wrap: wrap; gap: 6px; row-gap: 10px; }
+    .cards figure { position: relative; width: calc((100% - 30px) / 6); max-width: 56px; aspect-ratio: 1 / 2; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(60,50,30,.14); background: linear-gradient(#e4e4e4, #bdbdbd); color: #222; }
+    .cards img { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .cards span, .cards b { position: absolute; right: 6px; line-height: 1; text-shadow: 0 0 3px rgba(255,255,255,.85); }
+    .cards span { top: 8px; font-size: 13px; font-weight: 700; }
+    .cards b { bottom: 7px; font-size: 12px; font-weight: 700; }
+    .cards .d35 { color: #5c1d05; } .cards .d50 { color: #06364f; } .cards .d100 { color: #06381a; }
+    .cards .d200 { color: #4a3200; } .cards .d500 { color: #2c3a02; } .cards .d1000 { color: #610a0f; }
+
+    .card-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+
+    /* 掃描畫面 */
+    #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+    .scan-chip { border: 1px solid #374151; background: #1f2937; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 14px; }
+    .scan-chip[aria-pressed="true"] { background: #059669; border-color: #34d399; font-weight: 700; }
+    /* 紅線固定在畫面中央；取景框依待掃段落在卡背的高度上下移動 */
+    #guide-box { position: absolute; left: 50%; top: 50%; width: 85%; max-width: 340px; aspect-ratio: 1.586 / 1; transform: translate(-50%, -60%); transition: transform .25s; }
+    #guide-box[data-target="2"] { transform: translate(-50%, -85%); }
+    .guide-seg { position: absolute; left: 5%; right: 39%; height: 15%; border: 1px dashed rgba(255,255,255,.7); border-radius: 4px; color: #fff; font-size: 11px; padding-left: 4px; }
+    .badge { display: inline-block; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 99px; padding: 0 8px; }
+    /* 結帳條碼 */
+    .co-barcode { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body class="font-sans select-none">
+
+  <!-- 首頁 -->
+  <main id="view-home" class="page">
+    <div class="page-body">
+      <div class="flex justify-between items-center gap-3">
+        <h1 class="editable page-title" contenteditable="plaintext-only" data-key="cv-title" data-default="7-11商品卡匣" aria-label="首頁標題"></h1>
+        <button class="bell" id="bell" onclick="toggleBackupPopover()" aria-label="備份提醒" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8"/><path d="M10 21h4"/></svg>
+        </button>
+      </div>
+      <div>
+        <p class="editable muted" contenteditable="plaintext-only" data-key="cv-label" data-default="餘額" aria-label="金額標籤"></p>
+        <p class="total" id="total-balance">$0</p>
+      </div>
+      <div class="cards" id="denominations"></div>
+      <p class="muted" id="home-empty" hidden>到「設定」新增第一張卡。</p>
+      <p class="muted" id="home-incomplete" hidden></p>
+      <button class="quote" id="quote" onclick="nextQuote()" title="點一下換一句"></button>
+    </div>
+
+    <div class="popover" id="backup-popover" hidden>
+      <span>上次備份：<b id="backup-last">尚未備份</b></span>
+      <label>提醒週期
+        <select id="remind-days" class="field" onchange="setRemindDays(this.value)">
+          <option value="0">不提醒</option><option value="7">每 7 天</option><option value="14">每 14 天</option><option value="30">每 30 天</option>
+        </select>
+      </label>
+      <button class="btn btn-primary" onclick="exportData()">立即備份</button>
+    </div>
+
+    <div class="page-bar">
+      <button class="btn btn-primary pay" id="btn-pay" onclick="openCheckout()">付款</button>
+      <button class="btn set" onclick="showPage('view-settings')">設定</button>
+    </div>
+  </main>
+
+  <!-- 設定 -->
+  <section id="view-settings" class="page sub-page" hidden>
+    <div class="page-body">
+      <h2 class="page-title">設定</h2>
+      <button class="btn btn-primary btn-menu" onclick="showPage('view-add')">新增卡片</button>
+      <button class="btn btn-menu" onclick="showPage('view-cards')">卡片管理</button>
+      <button class="btn btn-menu" onclick="showPage('view-text')">首頁文字</button>
+      <button class="btn btn-menu" onclick="exportData()">備份（下載檔案）</button>
+      <label class="btn btn-menu">還原（選擇備份檔）
+        <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+      </label>
+    </div>
+    <div class="page-bar"><button class="btn w-full" onclick="showPage(null)">返回首頁</button></div>
+  </section>
+
+  <!-- 新增卡片：選擇方式 -->
+  <section id="view-add" class="page sub-page" hidden>
+    <div class="page-body">
+      <h2 class="page-title">新增卡片</h2>
+      <button class="btn btn-primary btn-menu" onclick="openScanner()">批量掃描<br><span class="text-xs font-normal">使用相機，連續建檔</span></button>
+      <button class="btn btn-menu" onclick="openManual()">手動輸入<br><span class="muted">不啟動相機；之後需掃描補齊第②段才能付款</span></button>
+    </div>
+    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-settings')">返回</button></div>
+  </section>
+
+  <!-- 手動輸入 -->
+  <section id="view-manual" class="page sub-page" hidden>
+    <form id="manual-form" class="page-body" onsubmit="submitManual(event)">
+      <h2 class="page-title">手動輸入</h2>
+      <label>卡號（第①段條碼下方的 16 碼）
+        <input id="m-barcode" class="field" inputmode="numeric" autocomplete="off" required>
+      </label>
+      <div>
+        <p class="muted mb-2">面額</p>
+        <div class="flex flex-wrap gap-2" id="m-amounts"></div>
+        <input id="m-custom" class="field mt-2" type="number" min="1" step="1" placeholder="自訂面額" hidden>
+      </div>
+      <label>目前餘額（空白＝等於面額）
+        <input id="m-balance" class="field" type="number" min="1" step="1">
+      </label>
+      <p id="m-status" role="status" class="muted"></p>
+      <button class="btn btn-primary" type="submit">新增</button>
+    </form>
+    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-add')">返回</button></div>
+  </section>
+
+  <!-- 卡片管理 -->
+  <section id="view-cards" class="page sub-page" hidden>
+    <div class="page-body">
+      <h2 class="page-title">卡片管理</h2>
+      <div class="flex gap-2">
+        <button class="chip" id="filter-active" aria-pressed="true" onclick="setFilter('active')">可用卡片</button>
+        <button class="chip" id="filter-used" aria-pressed="false" onclick="setFilter('used')">已用完</button>
+      </div>
+      <div id="card-list" class="flex flex-col gap-3"></div>
+    </div>
+    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-settings')">返回</button></div>
+  </section>
+
+  <!-- 首頁文字 -->
+  <section id="view-text" class="page sub-page" hidden>
+    <div class="page-body">
+      <h2 class="page-title">首頁文字</h2>
+      <label>標題<input class="field" maxlength="14" data-text="cv-title"></label>
+      <label>金額標籤<input class="field" maxlength="14" data-text="cv-label"></label>
+      <p class="muted">清空後會恢復預設文字。也可以在首頁直接點文字修改。</p>
+    </div>
+    <div class="page-bar"><button class="btn w-full" onclick="showPage('view-settings')">返回</button></div>
+  </section>
+
+  <!-- 掃描 -->
+  <div id="view-scanner" class="hidden fixed inset-0 bg-black z-30 flex flex-col">
+    <div class="p-4 flex justify-between items-center text-white bg-black/70 z-10">
+      <button onclick="closeScanner()" class="text-sm bg-gray-800 px-3 py-1.5 rounded-lg">✕ 關閉</button>
+      <span class="text-sm font-medium">將卡片對準框線自動掃描</span>
+      <span class="text-xs text-emerald-400" id="scan-session-count">本次已掃: 0</span>
+    </div>
+
+    <div class="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+      <div id="reader" class="w-full h-full"></div>
+      <div id="guide-box" data-target="1" class="border-2 border-emerald-400 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] pointer-events-none">
+        <span class="absolute left-3 top-2 text-xs font-bold text-red-300">商品卡 N 元</span>
+        <div class="guide-seg" style="top:52.5%">①</div>
+        <div class="guide-seg" style="top:77.5%">②</div>
+      </div>
+      <div id="scan-line" class="absolute inset-x-6 top-1/2 h-0.5 bg-red-500/80 shadow-[0_0_8px_red] pointer-events-none"></div>
+    </div>
+
+    <div class="bg-gray-900 px-4 py-3 text-white z-10">
+      <p class="text-sm font-bold" id="scan-status" role="status"></p>
+      <div class="flex justify-between items-center gap-2 mt-1 min-h-[32px]">
+        <span class="text-xs text-gray-300" id="scan-progress"></span>
+        <button type="button" class="scan-chip" id="scan-reset" onclick="resetPending()" hidden>重掃這張</button>
+      </div>
+      <div class="flex items-center gap-2 mt-1" id="scan-last" hidden>
+        <img id="scan-last-img" class="w-12 h-8 object-cover rounded" alt="">
+        <span class="flex-1 text-xs text-emerald-300" id="scan-last-text"></span>
+        <button type="button" class="scan-chip" onclick="undoLastScan()">撤回</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-2" id="preset-amounts" aria-label="掃描預設面額"></div>
+      <div class="flex gap-2 mt-2">
+        <input type="text" id="manual-barcode" inputmode="numeric" placeholder="①反光難掃時，輸入 16 碼" class="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
+        <button onclick="manualSegment()" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold">帶入①</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 解碼用離屏容器：函式庫依容器尺寸縮放圖片 -->
+  <div id="decode-area" aria-hidden="true" style="position:fixed;left:-10000px;top:0;width:1600px;height:400px;overflow:hidden"></div>
+
+  <!-- 結帳：固定白底黑條碼，不套用 Theme -->
+  <div id="view-checkout" class="hidden fixed inset-0 bg-white text-black z-40 flex flex-col justify-between">
+    <div>
+      <div class="bg-red-600 text-white text-center py-2 px-4 text-xs font-bold tracking-wider">
+        ⚠️ 結帳前請手動將手機螢幕亮度調至 100%
+      </div>
+      <div class="p-4 flex justify-between items-center border-b">
+        <button onclick="closeCheckout()" class="text-gray-600 font-bold px-2 py-1">✕ 結束結帳</button>
+        <div class="text-center">
+          <span class="text-xs text-gray-500 block">本輪已核銷</span>
+          <span class="font-bold text-emerald-700" id="checkout-session-total">$0 (0張)</span>
+        </div>
+        <span class="text-sm font-bold bg-gray-100 px-3 py-1 rounded-full" id="checkout-progress">1 / 1</span>
+      </div>
+    </div>
+
+    <div id="checkout-card-area" class="flex-1 min-h-0 overflow-y-auto">
+      <div class="min-h-full flex flex-col items-center justify-center px-4 py-2 text-center">
+        <div>
+          <span class="text-sm text-gray-500">本張餘額</span>
+          <h2 class="text-3xl font-black text-black" id="co-balance">$100</h2>
+        </div>
+
+        <div class="my-2 w-full max-w-sm bg-white py-2 px-1 flex flex-col items-center justify-center min-h-[180px]">
+          <!-- 兩段同時顯示，順序同實體卡；間距拉大，降低掃描槍讀錯段 -->
+          <div id="co-barcodes" class="w-full">
+            <p class="text-left text-sm font-bold">① 第一段</p>
+            <svg id="co-barcode-svg" class="co-barcode"></svg>
+            <p class="text-left text-sm font-bold mt-6 border-t border-dashed pt-3">② 第二段</p>
+            <svg id="co-barcode2-svg" class="co-barcode"></svg>
+          </div>
+          <img id="co-crop-img" class="hidden max-h-[240px] w-full object-contain rounded" alt="卡片原圖">
+        </div>
+
+        <button onclick="toggleBarcodeImage()" id="btn-toggle-img" class="text-xs text-blue-600 underline">
+          刷不過？切換顯示實體卡片裁切原圖
+        </button>
+      </div>
+    </div>
+
+    <div class="p-4 bg-gray-50 border-t grid grid-cols-3 gap-3">
+      <button onclick="prevCheckoutCard()" class="py-3.5 rounded-xl bg-gray-200 font-bold text-gray-700 active:bg-gray-300">
+        ← 上一張
+      </button>
+      <button onclick="markUsedAndNext()" id="btn-mark-used" class="col-span-2 py-3.5 rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-lg active:bg-emerald-700 disabled:opacity-50">
+        ✓ 已刷完 (歸零並下一張)
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const DB_NAME = '711CardVaultDB';
+    const STORE_NAME = 'cards';
+    const FACE_VALUES = [35, 50, 100, 200, 500, 1000];
+    let db;
+    let allCards = [];
+    let currentFilter = 'active';
+    let presetAmount = 100;
+    let scanSessionCount = 0;
+
+    const $ = id => document.getElementById(id);
+
+    // 偏好設定存 localStorage；讀寫失敗就用預設值
+    function readPref(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function writePref(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) {}
+    }
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+          db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = (e) => {
+          db = e.target.result;
+          loadCards().then(resolve);
+        };
+        request.onerror = (e) => reject(e);
+      });
+    }
+
+    function loadCards() {
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          allCards = req.result.sort((a, b) => b.createdAt - a.createdAt);
+          render();
+          resolve();
+        };
+      });
+    }
+
+    function writeStore(action) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        action(tx.objectStore(STORE_NAME));
+        tx.oncomplete = () => loadCards().then(resolve);
+        tx.onabort = () => reject(tx.error);
+      });
+    }
+
+    function saveCardToDB(card) {
+      return writeStore(store => store.put(card));
+    }
+
+    function removeCard(id) {
+      return writeStore(store => store.delete(id));
+    }
+
+    function deleteCardFromDB(id) {
+      if (!confirm('確定要刪除這張卡片嗎？')) return;
+      removeCard(id).catch(() => alert('刪除失敗，請再試一次'));
+    }
+
+    // ===== 頁面切換 =====
+    function showPage(id) {
+      document.querySelectorAll('.sub-page').forEach(page => page.hidden = page.id !== id);
+      $('view-home').hidden = Boolean(id);
+      $('backup-popover').hidden = true;
+      $('bell').setAttribute('aria-expanded', 'false');
+      if (id === 'view-text') {
+        document.querySelectorAll('[data-text]').forEach(input => input.value = textOf(input.dataset.text));
+      }
+    }
+
+    // ===== 兩段條碼 =====
+    const SEGMENT_PATTERNS = { 1: /^\d{16}$/, 2: /^[0-9A-Z]{8}$/ };
+
+    function segmentOf(value) {
+      return SEGMENT_PATTERNS[1].test(value) ? 1 : SEGMENT_PATTERNS[2].test(value) ? 2 : 0;
+    }
+
+    function isComplete(card) {
+      return SEGMENT_PATTERNS[2].test(card.barcode2 || '');
+    }
+
+    // ===== 首頁與清單 =====
+    function activeCards() {
+      return allCards.filter(c => c.status === 'active' && c.balance > 0);
+    }
+
+    // 兩段齊全才能付款
+    function payableCards() {
+      return activeCards().filter(isComplete);
+    }
+
+    function render() {
+      renderHome();
+      renderCardList();
+    }
+
+    function renderHome() {
+      const cards = payableCards();
+      const sumOf = list => list.reduce((sum, c) => sum + Number(c.balance), 0);
+      $('total-balance').textContent = `$${sumOf(cards).toLocaleString()}`;
+      $('btn-pay').disabled = cards.length === 0;
+      const incomplete = activeCards().filter(c => !isComplete(c));
+      $('home-empty').hidden = cards.length > 0 || incomplete.length > 0;
+      $('home-incomplete').hidden = incomplete.length === 0;
+      $('home-incomplete').textContent = `另有 ${incomplete.length} 張待補掃（$${sumOf(incomplete).toLocaleString()}），尚不能付款。`;
+
+      // 依面額分組；部分使用的卡仍算在原面額
+      const counts = new Map();
+      cards.forEach(c => {
+        const value = Number(c.initialAmount) || 0;
+        counts.set(value, (counts.get(value) || 0) + 1);
+      });
+
+      $('denominations').replaceChildren(...[...counts].sort((a, b) => a[0] - b[0]).map(([value, count]) => {
+        const figure = document.createElement('figure');
+        figure.setAttribute('aria-label', `面額 ${value}，${count} 張`);
+        if (FACE_VALUES.includes(value)) {
+          figure.className = `d${value}`;
+          const img = document.createElement('img');
+          img.src = `cards/card-${value}.svg`;
+          img.alt = '';
+          figure.append(img);
+        }
+        const face = document.createElement('span');
+        face.textContent = value;
+        const num = document.createElement('b');
+        num.textContent = `×${count}`;
+        figure.append(face, num);
+        return figure;
+      }));
+      renderBell();
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      $('filter-active').setAttribute('aria-pressed', filter === 'active');
+      $('filter-used').setAttribute('aria-pressed', filter === 'used');
+      renderCardList();
+    }
+
+    // 卡片欄位來自掃描或匯入檔，寫入 innerHTML 前一律跳脫
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function tailOf(barcode) {
+      return `…${String(barcode).slice(-4)}`;
+    }
+
+    function renderCardList() {
+      const listEl = $('card-list');
+      const filtered = allCards.filter(c => currentFilter === 'active' ? (c.status === 'active' && c.balance > 0) : (c.status === 'used' || c.balance <= 0));
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<p class="muted text-center py-10">目前沒有${currentFilter === 'active' ? '可用' : '已用完'}的卡片</p>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(card => `
+        <div class="card-row">
+          <div class="flex items-center gap-3 min-w-0">
+            ${card.cropImage
+              ? `<img src="${escapeHTML(card.cropImage)}" class="w-16 h-10 object-cover rounded" alt="">`
+              : `<div class="muted w-16 h-10 flex items-center justify-center">無照片</div>`
+            }
+            <div>
+              <p class="muted font-mono">${escapeHTML(tailOf(card.barcode))} ${isComplete(card) ? '' : '<span class="badge">待補掃</span>'}</p>
+              <p class="font-bold text-lg">$${escapeHTML(card.balance)} <span class="muted font-normal">/ ${escapeHTML(card.initialAmount)}</span></p>
+            </div>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button data-id="${escapeHTML(card.id)}" onclick="editBalance(this.dataset.id)" class="chip">改餘額</button>
+            <button data-id="${escapeHTML(card.id)}" onclick="deleteCardFromDB(this.dataset.id)" class="chip btn-danger">刪</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editBalance(id) {
+      const card = allCards.find(c => c.id === id);
+      if (!card) return;
+      const newVal = prompt(`修改卡片 (${tailOf(card.barcode)}) 剩餘金額：`, card.balance);
+      if (newVal !== null && !isNaN(newVal) && Number(newVal) >= 0) {
+        card.balance = Number(newVal);
+        card.status = card.balance === 0 ? 'used' : 'active';
+        saveCardToDB(card);
+      }
+    }
+
+    // ===== 首頁文字 =====
+    function textOf(key) {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      return readPref(key) || el.dataset.default;
+    }
+
+    function setText(key, value) {
+      const text = value.trim().slice(0, 14);
+      writePref(key, text);
+      const el = document.querySelector(`[data-key="${key}"]`);
+      el.textContent = text || el.dataset.default;
+    }
+
+    document.querySelectorAll('[data-key]').forEach(el => {
+      el.textContent = textOf(el.dataset.key);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+      el.addEventListener('blur', () => setText(el.dataset.key, el.textContent));
+    });
+    document.querySelectorAll('[data-text]').forEach(input => {
+      input.addEventListener('input', () => setText(input.dataset.text, input.value));
+    });
+
+    // ===== 心情小語 =====
+    const QUOTES = ['小錢花得開心，也是一種富足。', '今天也辛苦了，買點喜歡的吧。', '零頭湊一湊，就是一杯咖啡。', '慢慢花，每一張都算數。', '照顧自己，從一份熱食開始。'];
+    let quoteIndex = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000) % QUOTES.length; // 每天換一句
+
+    function showQuote() {
+      $('quote').textContent = QUOTES[quoteIndex];
+    }
+
+    function nextQuote() {
+      quoteIndex = (quoteIndex + 1) % QUOTES.length;
+      showQuote();
+    }
+
+    // ===== 備份提醒（僅開啟 app 時檢查） =====
+    function remindDays() {
+      return Number(readPref('cv-remind') ?? 14);
+    }
+
+    function renderBell() {
+      const last = Number(readPref('cv-last-backup')) || 0;
+      const days = Math.floor((Date.now() - last) / 86400000);
+      const period = remindDays();
+      $('bell').classList.toggle('due', period > 0 && allCards.length > 0 && (!last || days >= period));
+      $('backup-last').textContent = !last ? '尚未備份' : days === 0 ? '今天' : `${days} 天前`;
+      $('remind-days').value = String(period);
+    }
+
+    function setRemindDays(value) {
+      writePref('cv-remind', value);
+      renderBell();
+    }
+
+    function toggleBackupPopover() {
+      const pop = $('backup-popover');
+      pop.hidden = !pop.hidden;
+      $('bell').setAttribute('aria-expanded', !pop.hidden);
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#backup-popover, #bell')) {
+        $('backup-popover').hidden = true;
+        $('bell').setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // ===== 手動輸入（不啟動相機） =====
+    let manualAmount = 100; // 0 代表自訂
+
+    function renderAmountChips(containerId, className, selected, onPick) {
+      $(containerId).replaceChildren(...[...FACE_VALUES, 0].map(value => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = className;
+        btn.textContent = value ? `$${value}` : '自訂';
+        btn.setAttribute('aria-pressed', value ? value === selected : !FACE_VALUES.includes(selected));
+        btn.onclick = () => onPick(value);
+        return btn;
+      }));
+    }
+
+    function setManualAmount(value) {
+      manualAmount = value;
+      renderAmountChips('m-amounts', 'chip', value, setManualAmount);
+      $('m-custom').hidden = value !== 0;
+      $('m-custom').required = value === 0;
+    }
+
+    function openManual() {
+      $('manual-form').reset();
+      $('m-status').textContent = '';
+      setManualAmount(manualAmount);
+      showPage('view-manual');
+    }
+
+    function submitManual(event) {
+      event.preventDefault();
+      const status = $('m-status');
+      const barcode = $('m-barcode').value.trim();
+      const face = manualAmount || Number($('m-custom').value);
+      const balance = $('m-balance').value === '' ? face : Number($('m-balance').value);
+
+      if (!SEGMENT_PATTERNS[1].test(barcode)) return status.textContent = '卡號需為 16 碼數字。';
+      if (!Number.isInteger(face) || face <= 0) return status.textContent = '請輸入正確的面額。';
+      if (!Number.isInteger(balance) || balance <= 0 || balance > face) return status.textContent = '餘額需介於 1 與面額之間。';
+      if (allCards.some(c => c.barcode === barcode)) return status.textContent = `尾碼 ${tailOf(barcode)} 的卡片已經建檔過。`;
+
+      saveCardToDB(newCard(barcode, face, balance, null)).then(() => {
+        $('manual-form').reset();
+        setManualAmount(manualAmount);
+        status.textContent = `已新增尾碼 ${tailOf(barcode)}（餘額 $${balance}），待掃描補齊第②段。可繼續輸入。`;
+        $('m-barcode').focus();
+      });
+    }
+
+    function newCard(barcode, face, balance, cropImage) {
+      return {
+        id: crypto.randomUUID(),
+        barcode,
+        initialAmount: face,
+        balance,
+        status: 'active',
+        cropImage,
+        createdAt: Date.now()
+      };
+    }
+
+    // ===== 掃描：兩段齊全才儲存 =====
+    const READS_REQUIRED = 3; // 同一段連續讀到相同內容才採用
+    let camera = null;  // { stream, video, timer }
+    let cameraRequest = 0;
+    let decoder = null;
+    let pending;       // 目前這張卡已讀到的段落
+    let streaks;
+    let lastSaved = null;
+    let justSaved = []; // 剛存檔的卡還在鏡頭前，不重複提示
+    let savingScan = false;
+
+    function emptyPending() {
+      return { 1: null, 2: null, image: null, existing: null };
+    }
+
+    function setPresetAmount(amt) {
+      if (!amt) {
+        const input = Number(prompt('輸入自訂面額：', presetAmount));
+        if (!Number.isInteger(input) || input <= 0) return;
+        amt = input;
+      }
+      presetAmount = amt;
+      renderAmountChips('preset-amounts', 'scan-chip', amt, setPresetAmount);
+      const custom = $('preset-amounts').lastElementChild;
+      if (!FACE_VALUES.includes(amt)) custom.textContent = `自訂 $${amt}`;
+    }
+
+    function setScanStatus(text, warn) {
+      const el = $('scan-status');
+      if (warn && el.textContent !== text && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      el.textContent = text;
+      el.classList.toggle('text-yellow-300', Boolean(warn));
+    }
+
+    function updateScanUI() {
+      $('guide-box').dataset.target = pending[1] ? '2' : '1';
+      const mark = seg => pending[seg] ? `✓ ${tailOf(pending[seg])}` : '未掃';
+      $('scan-progress').textContent = `① ${mark(1)}　② ${mark(2)}${pending.existing ? '（補掃）' : ''}`;
+      $('scan-reset').hidden = !pending[1] && !pending[2];
+      setScanStatus(pending[1] ? '① 完成。卡片往上移，把 ② 對準紅線'
+        : pending[2] ? '② 完成。把 ① 對準紅線'
+        : '照框線擺放卡背，把 ① 對準紅線');
+    }
+
+    function resetPending() {
+      pending = emptyPending();
+      streaks = { 1: { value: '', count: 0 }, 2: { value: '', count: 0 } };
+      updateScanUI();
+    }
+
+    function openScanner() {
+      scanSessionCount = 0;
+      lastSaved = null;
+      justSaved = [];
+      savingScan = false;
+      $('scan-session-count').innerText = `本次已掃: 0`;
+      $('scan-last').hidden = true;
+      $('manual-barcode').value = '';
+      $('view-scanner').classList.remove('hidden');
+      setPresetAmount(presetAmount);
+      resetPending();
+
+      startCamera();
+    }
+
+    // 不用函式庫內建的相機迴圈：它以顯示尺寸解碼，解析度不足。
+    // 改以相機原始解析度裁出紅線附近的長條，再交給同一函式庫解碼。
+    async function startCamera() {
+      const request = ++cameraRequest;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] }
+        });
+        if (request !== cameraRequest) return stream.getTracks().forEach(t => t.stop()); // 開啟途中已關閉
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.srcObject = stream;
+        $('reader').replaceChildren(video);
+        camera = { stream, video, timer: 0 };
+        await video.play();
+        decodeLoop(request);
+      } catch (err) {
+        if (request === cameraRequest) alert("無法啟動相機，請確認網址為 HTTPS 並允許相機權限：\n" + err);
+      }
+    }
+
+    function stopCamera() {
+      cameraRequest++;
+      if (!camera) return;
+      clearTimeout(camera.timer);
+      camera.stream.getTracks().forEach(t => t.stop());
+      camera = null;
+      $('reader').replaceChildren();
+    }
+
+    function closeScanner() {
+      stopCamera();
+      $('view-scanner').classList.add('hidden');
+    }
+
+    // 將畫面上的元素位置換算成影像座標（video 以 object-fit: cover 顯示）
+    function toVideoRect(video, element) {
+      const view = video.getBoundingClientRect();
+      const box = element.getBoundingClientRect();
+      const scale = Math.max(view.width / video.videoWidth, view.height / video.videoHeight);
+      const offsetX = (view.width - video.videoWidth * scale) / 2;
+      const offsetY = (view.height - video.videoHeight * scale) / 2;
+      return {
+        x: (box.left - view.left - offsetX) / scale,
+        y: (box.top - view.top - offsetY) / scale,
+        w: box.width / scale,
+        h: box.height / scale
+      };
+    }
+
+    // 依序嘗試的橫向範圍（相對取景框）：新版紙卡條碼靠左、右側有 QR Code；舊版置中。
+    // average：沿條碼方向取平均，消除紙卡印刷網點（不依賴 canvas filter）。
+    const SCAN_VARIANTS = [
+      { from: 0.02, to: 0.64, average: true },
+      { from: 0.02, to: 0.64, average: false },
+      { from: 0.09, to: 0.91, average: false },
+      { from: 0.13, to: 0.87, average: true },
+      { from: 0.18, to: 0.82, average: true },  // 銀漆灰底：只取灰底內側
+      { from: 0, to: 1, average: false }
+    ];
+
+    function averageColumns(ctx, width, height, margin) {
+      const image = ctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      const columns = new Array(width);
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        for (let y = 0; y < height; y++) {
+          const i = (y * width + x) * 4;
+          sum += data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+        }
+        columns[x] = sum / height;
+      }
+      // 拉開明暗（灰底時提高對比），兩側補白邊不列入
+      let min = 255;
+      let max = 0;
+      for (let x = margin; x < width - margin; x++) {
+        min = Math.min(min, columns[x]);
+        max = Math.max(max, columns[x]);
+      }
+      for (let x = 0; x < width; x++) {
+        const gray = x < margin || x >= width - margin ? 255 : (columns[x] - min) * 255 / Math.max(1, max - min);
+        for (let y = 0; y < height; y++) {
+          const i = (y * width + x) * 4;
+          data[i] = data[i + 1] = data[i + 2] = gray;
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+    }
+
+    async function decodeBand(video) {
+      const box = toVideoRect(video, $('guide-box'));
+      const line = toVideoRect(video, $('scan-line'));
+      const bandHeight = box.h * 0.07;
+      const margin = 30; // 左右補白邊，作為靜音區
+      const canvas = document.createElement('canvas');
+      for (const variant of SCAN_VARIANTS) {
+        const width = box.w * (variant.to - variant.from);
+        const outWidth = Math.max(800, Math.round(width));
+        canvas.width = outWidth + margin * 2;
+        canvas.height = Math.round(bandHeight * outWidth / width);
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, box.x + box.w * variant.from, line.y + line.h / 2 - bandHeight / 2, width, bandHeight, margin, 0, outWidth, canvas.height);
+        if (variant.average) averageColumns(ctx, canvas.width, canvas.height, margin);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        try {
+          const result = await decoder.scanFileV2(new File([blob], 'band.png', { type: 'image/png' }), false);
+          return result.decodedText;
+        } catch (e) {
+        } finally {
+          decoder.clear();
+        }
+      }
+      return null;
+    }
+
+    async function decodeLoop(request) {
+      // formatsToSupport 屬於建構子選項
+      decoder = decoder || new Html5Qrcode('decode-area', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128], verbose: false });
+      if (request !== cameraRequest || !camera) return;
+      if (camera.video.videoWidth) {
+        const text = await decodeBand(camera.video);
+        if (request !== cameraRequest || !camera) return;
+        if (text) onScanSuccess(text);
+      }
+      camera.timer = setTimeout(() => decodeLoop(request), 80);
+    }
+
+    // 依畫面上的取景框裁切（video 以 object-fit: cover 顯示，需換算回影像座標）
+    function captureCroppedCardImage() {
+      try {
+        const video = document.querySelector('#reader video');
+        if (!video || video.videoWidth === 0) return null;
+
+        const { x, y, w, h } = toVideoRect(video, $('guide-box'));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = Math.round(640 / 1.586);
+
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, x, y, w, h, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.8);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (savingScan || justSaved.includes(decodedText)) return;
+      const segment = segmentOf(decodedText);
+      if (!segment) return setScanStatus('這不是商品卡的條碼', true);
+
+      const streak = streaks[segment];
+      streak.count = streak.value === decodedText ? streak.count + 1 : 1;
+      streak.value = decodedText;
+      if (streak.count >= READS_REQUIRED) acceptSegment(segment, decodedText);
+    }
+
+    function acceptSegment(segment, value) {
+      if (savingScan || pending[segment] === value) return;
+      if (pending[segment]) return setScanStatus(`讀到另一張卡的第 ${segment} 段。要換卡請按「重掃這張」`, true);
+
+      const found = allCards.find(c => c.barcode === value || c.barcode2 === value);
+      if (found) {
+        // 只有「①相符的待補掃卡」可以補掃，其餘視為重複
+        if (isComplete(found) || segment !== 1 || found.barcode !== value) {
+          return setScanStatus(`尾碼 ${tailOf(found.barcode)} 的卡片已經建檔過`, true);
+        }
+        pending.existing = found;
+      }
+
+      pending[segment] = value;
+      if (segment === 1) pending.image = captureCroppedCardImage();
+
+      if (navigator.vibrate) navigator.vibrate(60);
+      const guideBox = $('guide-box');
+      guideBox.classList.replace('border-emerald-400', 'border-yellow-300');
+      setTimeout(() => guideBox.classList.replace('border-yellow-300', 'border-emerald-400'), 300);
+
+      if (pending[1] && pending[2]) savePending();
+      else updateScanUI();
+    }
+
+    function savePending() {
+      savingScan = true;
+      const { existing, image } = pending;
+      const values = [pending[1], pending[2]];
+      const card = existing
+        ? { ...existing, barcode2: pending[2], cropImage: image || existing.cropImage }
+        : { ...newCard(pending[1], presetAmount, presetAmount, image), barcode2: pending[2] };
+
+      saveCardToDB(card).then(() => {
+        lastSaved = { card, previous: existing ? { ...existing } : null };
+        justSaved = values;
+        scanSessionCount++;
+        $('scan-session-count').innerText = `本次已掃: ${scanSessionCount}`;
+        $('scan-last').hidden = false;
+        $('scan-last-img').hidden = !card.cropImage;
+        if (card.cropImage) $('scan-last-img').src = card.cropImage;
+        $('scan-last-text').textContent = `${existing ? '已補掃' : '已存'} ${tailOf(card.barcode)}　面額 $${card.initialAmount}`;
+        resetPending();
+      }).catch(() => {
+        resetPending();
+        setScanStatus('儲存失敗，請重掃這張', true);
+      }).finally(() => savingScan = false);
+    }
+
+    function undoLastScan() {
+      if (!lastSaved) return;
+      const { card, previous } = lastSaved;
+      lastSaved = null;
+      $('scan-last').hidden = true;
+      const undone = previous ? saveCardToDB(previous) : removeCard(card.id);
+      undone.then(() => {
+        scanSessionCount--;
+        $('scan-session-count').innerText = `本次已掃: ${scanSessionCount}`;
+        setScanStatus('已撤回上一張');
+        setTimeout(() => justSaved = [], 4000); // 讓使用者先移開卡片
+      }).catch(() => setScanStatus('撤回失敗，請到卡片管理確認', true));
+    }
+
+    // ①反光時手動輸入，再掃 ② 完成
+    function manualSegment() {
+      const input = $('manual-barcode');
+      const code = input.value.trim();
+      if (!SEGMENT_PATTERNS[1].test(code)) return setScanStatus('① 需為 16 碼數字', true);
+      input.value = '';
+      justSaved = [];
+      acceptSegment(1, code);
+    }
+
+    // ===== 結帳 =====
+    let checkoutQueue = [];
+    let checkoutIndex = 0;
+    let sessionUsedAmount = 0;
+    let sessionUsedCount = 0;
+    let wakeLock = null;
+    let showingRawImage = false;
+    let checkoutBusy = false;
+    const MARK_COOLDOWN_MS = 600; // 換卡後短暫鎖定，避免連點核銷到下一張
+
+    function setCheckoutBusy(busy) {
+      checkoutBusy = busy;
+      $('btn-mark-used').disabled = busy;
+    }
+
+    async function openCheckout() {
+      checkoutQueue = payableCards();
+      if (checkoutQueue.length === 0) {
+        alert('目前沒有可用的商品卡喔！');
+        return;
+      }
+      checkoutIndex = 0;
+      sessionUsedAmount = 0;
+      sessionUsedCount = 0;
+      setCheckoutBusy(false);
+      $('view-checkout').classList.remove('hidden');
+      renderCheckoutCard();
+
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {}
+    }
+
+    function closeCheckout() {
+      $('view-checkout').classList.add('hidden');
+      if (wakeLock) {
+        wakeLock.release().then(() => wakeLock = null);
+      }
+    }
+
+    function renderCheckoutCard() {
+      $('checkout-session-total').innerText = `$${sessionUsedAmount} (${sessionUsedCount}張)`;
+
+      if (checkoutIndex >= checkoutQueue.length) {
+        alert(`🎉 佇列中的卡片已全部結帳完畢！本輪共核銷 $${sessionUsedAmount}`);
+        closeCheckout();
+        return;
+      }
+
+      const card = checkoutQueue[checkoutIndex];
+      $('checkout-progress').innerText = `${checkoutIndex + 1} / ${checkoutQueue.length}`;
+      $('co-balance').innerText = `$${card.balance}`;
+
+      showingRawImage = false;
+      $('co-barcodes').classList.remove('hidden');
+      $('co-crop-img').classList.add('hidden');
+      $('btn-toggle-img').innerText = '刷不過？切換顯示實體卡片裁切原圖';
+
+      const options = { format: 'CODE128', lineColor: '#000000', background: '#ffffff', width: 2, height: 80, displayValue: true, fontSize: 16, margin: 20, marginTop: 6, marginBottom: 6 };
+      JsBarcode('#co-barcode-svg', card.barcode, options);
+      JsBarcode('#co-barcode2-svg', card.barcode2, options);
+
+      if (card.cropImage) {
+        $('co-crop-img').src = card.cropImage;
+      }
+    }
+
+    function toggleBarcodeImage() {
+      const card = checkoutQueue[checkoutIndex];
+      if (!card.cropImage) {
+        alert('這張卡片建檔時沒有儲存到照片喔！');
+        return;
+      }
+      showingRawImage = !showingRawImage;
+      $('co-barcodes').classList.toggle('hidden', showingRawImage);
+      $('co-crop-img').classList.toggle('hidden', !showingRawImage);
+      $('btn-toggle-img').innerText = showingRawImage
+        ? '切換回高對比數位條碼'
+        : '刷不過？切換顯示實體卡片裁切原圖';
+    }
+
+    function prevCheckoutCard() {
+      if (!checkoutBusy && checkoutIndex > 0) {
+        checkoutIndex--;
+        renderCheckoutCard();
+      }
+    }
+
+    function markUsedAndNext() {
+      if (checkoutBusy) return;
+      setCheckoutBusy(true);
+      const card = checkoutQueue[checkoutIndex];
+      // 回到已核銷的卡再按一次時，只換下一張，不重複計數
+      let saved = Promise.resolve();
+      if (card.status !== 'used') {
+        sessionUsedAmount += Number(card.balance);
+        sessionUsedCount++;
+
+        card.balance = 0;
+        card.status = 'used';
+        saved = saveCardToDB(card);
+      }
+      saved.then(() => {
+        checkoutIndex++;
+        renderCheckoutCard();
+      }).finally(() => setTimeout(() => setCheckoutBusy(false), MARK_COOLDOWN_MS));
+    }
+
+    // ===== 備份與還原 =====
+    function exportData() {
+      const dataStr = JSON.stringify(allCards);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `711_cards_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      writePref('cv-last-backup', Date.now()); // 只能確認已觸發下載
+      renderBell();
+    }
+
+    function importData(event) {
+      const input = event.target;
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!Array.isArray(imported)) throw new Error('格式錯誤');
+          let removedImages = 0;
+          for (const card of imported) {
+            // 只接受內嵌圖片，避免顯示時向外部網址發出請求
+            if (card.cropImage && !String(card.cropImage).startsWith('data:image/')) {
+              card.cropImage = null;
+              removedImages++;
+            }
+            const current = allCards.find(c => c.id === card.id);
+            if (current && isComplete(current) && !isComplete(card) && current.barcode === card.barcode) {
+              card.barcode2 = current.barcode2;
+            }
+            await saveCardToDB(card);
+          }
+          alert(`成功匯入 ${imported.length} 張卡片資料！` + (removedImages ? `\n其中 ${removedImages} 張的圖片格式不符，未匯入圖片。` : ''));
+        } catch (err) {
+          alert('匯入失敗：檔案格式不正確');
+        }
+        input.value = ''; // 讓同一個檔案可以再選一次
+      };
+      reader.readAsText(file);
+    }
+
+    showQuote();
+    initDB();
+  </script>
+</body>
+</html>

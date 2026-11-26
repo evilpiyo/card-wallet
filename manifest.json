@@ -1,0 +1,9 @@
+{
+  "name": "7-11 商品卡管家",
+  "short_name": "7-11卡管家",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#047857",
+  "orientation": "portrait"
+}
