@@ -146,7 +146,10 @@
     @keyframes breathe { 50% { box-shadow: 0 0 3px rgba(var(--c),.12), 0 0 8px rgba(var(--c),.06); } }
     @media (prefers-reduced-motion: reduce) { .z { animation: none; } }
     .scanbar { flex: none; padding: 8px 16px 6px; border-bottom: 1px solid #374151; min-height: 74px; }
-    .scan-status { display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 14px; font-weight: 700; }
+    .scan-status { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; font-weight: 700; }
+    #scan-status, #scan-dot { transition: opacity 1s; }
+    .scan-status.fading #scan-status, .scan-status.fading #scan-dot { opacity: 0; transition-duration: 1s; }
+    @media (prefers-reduced-motion: reduce) { #scan-status, #scan-dot { transition: none !important; } }
     .scan-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #60a5fa; flex: none; }
     .latest { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; }
     .trash { width: 44px; height: 36px; display: grid; place-items: center; flex: none; margin-left: auto; background: none; border: 0; color: inherit; }
@@ -273,7 +276,7 @@
 
     <div class="scanbar">
       <div class="scan-status">
-        <span class="dot" id="scan-dot"></span><span class="flex-1" id="scan-status" role="status"></span>
+        <span class="dot" id="scan-dot"></span><span class="flex-1" id="scan-status" role="status" aria-atomic="true"></span>
         <button type="button" class="dark" id="scan-reset" onclick="resetPending()" hidden>重掃這張</button>
       </div>
       <div class="latest" id="scan-latest"></div>
@@ -933,6 +936,12 @@
     let pending;       // 目前這張卡已讀到的段落
     let streaks;
     let justSaved = []; // 剛存檔或剛刪除的卡還在鏡頭前，不重複處理
+    let holdLeft = 0;   // 剛刪除的卡：連續這麼久沒讀到才解除抑制
+    let statusLeft = 0; // 結果訊息剩餘顯示時間
+    let fadeLeft = 0;
+    let scanTicker = 0;
+    const SCAN_HINT = '整張卡背放進框內';
+    const RESULT_MS = 5000, FADE_MS = 1000, HOLD_MS = 4000, TICK_MS = 200;
     let savingScan = false;
     let faceVotes = new Map(); // 目前這張卡各次判讀結果
     let session = [];  // 本次掃描建的卡 { id, face, barcode, codes }，最新在前
@@ -945,13 +954,34 @@
       return { 1: null, 2: null, image: null, confirm: 0 };
     }
 
-    // buzz：需要使用者處理的警示才震動
-    function setScanStatus(text, state = 'wait', buzz = false) {
+    // buzz：需要使用者處理的警示才震動；result：事情已結束的訊息，停一段時間後淡出
+    function setScanStatus(text, state = 'wait', buzz = false, result = false) {
       const el = $('scan-status');
-      if (buzz && el.textContent !== text && navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      el.textContent = text;
-      el.style.color = state === 'warn' ? SCAN_COLORS.warn : '';
+      if (el.textContent !== text) {
+        if (buzz && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        el.textContent = text;
+      }
+      el.style.color = state === 'warn' ? SCAN_COLORS.warn : text === SCAN_HINT ? '#9ca3af' : '';
       $('scan-dot').style.background = SCAN_COLORS[state];
+      el.parentElement.classList.remove('fading');
+      statusLeft = result ? RESULT_MS : 0;
+      fadeLeft = 0;
+    }
+
+    // 面板開著時暫停所有倒數
+    function tickScan() {
+      if (!$('shade').hidden) return;
+      if (holdLeft > 0 && (holdLeft -= TICK_MS) <= 0) justSaved = [];
+      if (statusLeft > 0) {
+        statusLeft -= TICK_MS;
+        if (statusLeft <= 0) {
+          fadeLeft = matchMedia('(prefers-reduced-motion: reduce)').matches ? TICK_MS : FADE_MS;
+          $('scan-status').parentElement.classList.add('fading');
+          if (!pending[1] && !pending[2]) ['face', 1, 2].forEach(key => setZone(key));
+        }
+      } else if (fadeLeft > 0 && (fadeLeft -= TICK_MS) <= 0) {
+        updateScanUI(); // 換回目前狀態的提示
+      }
     }
 
     // key：face、1、2
@@ -970,7 +1000,7 @@
       $('scan-reset').hidden = !pending[1] && !pending[2];
       if (pending[1] && !pending[2]) setScanStatus('尚缺 ②，請勿換卡', 'warn');
       else if (pending[2] && !pending[1]) setScanStatus('尚缺 ①，請勿換卡', 'warn');
-      else setScanStatus('整張卡背放進框內');
+      else setScanStatus(SCAN_HINT);
     }
 
     function resetPending() {
@@ -984,6 +1014,9 @@
     function openScanner() {
       session = [];
       justSaved = [];
+      holdLeft = 0;
+      clearInterval(scanTicker);
+      scanTicker = setInterval(tickScan, TICK_MS);
       $('view-scanner').classList.remove('hidden');
       resetPending();
       renderSession();
@@ -1022,6 +1055,7 @@
     }
 
     function closeScanner() {
+      clearInterval(scanTicker);
       closeSheet();
       stopCamera();
       $('view-scanner').classList.add('hidden');
@@ -1164,9 +1198,13 @@
     }
 
     function onScanSuccess(decodedText) {
-      if (savingScan || !$('shade').hidden || justSaved.includes(decodedText)) return;
+      if (savingScan || !$('shade').hidden) return;
+      if (justSaved.includes(decodedText)) {
+        if (holdLeft > 0) holdLeft = HOLD_MS; // 剛刪除的卡還在鏡頭前，繼續擋
+        return;
+      }
       const segment = segmentOf(decodedText);
-      if (!segment) return setScanStatus('這不是商品卡的條碼', 'warn', true);
+      if (!segment) return setScanStatus('這不是商品卡的條碼', 'warn', true, true);
 
       const streak = streaks[segment];
       streak.count = streak.value === decodedText ? streak.count + 1 : 1;
@@ -1180,7 +1218,7 @@
           }
         } else if (streak.count >= SWAP_READS) {
           resetPending();
-          setScanStatus('偵測到換卡，已清除，請重新對準', 'warn', true);
+          setScanStatus('偵測到換卡，已清除，請重新對準', 'warn', true, true);
         }
         return;
       }
@@ -1193,7 +1231,7 @@
       const found = allCards.find(c => c.barcode === value || c.barcode2 === value);
       if (found) {
         setZone(segment, 'warn');
-        return setScanStatus(`已存在，未新增・${tail8(found.barcode)}`, 'warn', true);
+        return setScanStatus(`已存在，未新增・${tail8(found.barcode)}`, 'warn', true, true);
       }
 
       if (!pending[1] && !pending[2]) faceVotes = new Map(); // 丟掉上一張卡的殘留判讀
@@ -1252,11 +1290,12 @@
       return addCard(card).then(() => {
         session.unshift({ id: card.id, face, barcode: card.barcode, codes });
         justSaved = codes;
+        holdLeft = 0;
         resetPending();
         setZone('face', 'ok'); setZone(1, 'ok'); setZone(2, 'ok');
         $('guide-box').classList.add('saved');
         setTimeout(() => $('guide-box').classList.remove('saved'), 600);
-        setScanStatus('已新增，換下一張', 'ok');
+        setScanStatus('已新增，換下一張', 'ok', false, true);
         renderSession(face);
       }).catch(() => {
         resetPending();
@@ -1311,10 +1350,10 @@
         removeCard(id).then(() => {
           session = session.filter(c => c.id !== id);
           justSaved = entry.codes;
-          setTimeout(() => { if (justSaved === entry.codes) justSaved = []; }, 4000); // 讓使用者先移開卡片
+          holdLeft = HOLD_MS; // 拿開卡片後才可重掃
           closeSheet();
           resetPending();
-          setScanStatus('已刪除');
+          setScanStatus('已刪除', 'wait', false, true);
           renderSession();
           if (fromFace) viewScanGroup(fromFace);
         }).catch(() => toast('刪除失敗，請再試一次'));
