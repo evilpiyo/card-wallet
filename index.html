@@ -100,8 +100,9 @@
     .badge { display: inline-block; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 99px; padding: 0 8px; }
 
     /* 底部面板與提示 */
-    .shade { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
+    .shade { position: fixed; top: 0; left: 0; right: 0; height: 100%; height: 100dvh; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
     .sheet { width: 100%; max-width: 28rem; max-height: 92%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--bg); color: var(--text); }
+    .sheet-x { position: sticky; top: 0; z-index: 2; flex: none; align-self: flex-end; width: 40px; height: 40px; margin: -8px -6px -10px 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); font-size: 18px; cursor: pointer; }
     .toast { position: fixed; left: 16px; right: 16px; bottom: 24px; z-index: 60; max-width: 26rem; margin: 0 auto; padding: 10px 14px; border-radius: 12px; background: #222; color: #fff; font-size: 14px; text-align: center; }
     .btn-fill-danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
     .face-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; justify-items: center; }
@@ -717,7 +718,10 @@
 
     function openSheet(html, onDismiss = null) {
       sheetDismiss = onDismiss;
-      $('sheet').innerHTML = html;
+      // 右上角 ✕ 固定可見（底部按鈕可能被瀏覽器網址列擋住），作用同點背景
+      $('sheet').innerHTML = '<button type="button" class="sheet-x" aria-label="關閉">✕</button>' + html;
+      $('sheet').querySelector('.sheet-x').onclick = () => (sheetDismiss || closeSheet)();
+      $('sheet').scrollTop = 0;
       $('shade').hidden = false;
       sheetOpenedAt = Date.now();
     }
@@ -761,7 +765,7 @@
       if (!card) return;
       openSheet(`<b>改面額</b><p class="muted">${escapeHTML(maskedNo(card.barcode))}・目前 $${escapeHTML(card.initialAmount)}。未使用的卡，餘額跟著改；用過的卡保留餘額（不超過新面額）。</p>
         <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}" aria-pressed="${v === Number(card.initialAmount)}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>
-        <button type="button" class="btn" data-act="cancel">取消</button>`);
+        <button type="button" class="btn" data-act="cancel">取消</button>`, () => viewPhoto(id));
       $('sheet').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => changeFace(id, Number(btn.dataset.value)));
       sheetButton('cancel', () => viewPhoto(id));
     }
@@ -836,11 +840,12 @@
     function askDelete(id) {
       const card = findCard(id);
       if (!card) return;
+      const cancel = () => { closeSheet(); renderCardList(); };
       openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div>餘額 ${escapeHTML(money(card.balance))}</div></div>
         <p class="muted">餘額紀錄會一起刪除，無法復原。</p>
         <button type="button" class="btn" data-act="cancel">取消</button>
-        <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`);
-      sheetButton('cancel', () => { closeSheet(); renderCardList(); });
+        <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`, cancel);
+      sheetButton('cancel', cancel);
       sheetButton('delete', () => {
         removeCard(id).then(() => { closeSheet(); toast('已刪除'); })
           .catch(() => toast('刪除失敗，請再試一次'));
@@ -941,11 +946,13 @@
     let justSaved = []; // 剛存檔或剛刪除的卡還在鏡頭前，不重複處理
     let holdLeft = 0;   // 剛存檔或剛刪除的卡：連續這麼久沒讀到才解除抑制
     let holdMs = 0;
+    let ignoreLeft = 0; // 刪除重掃後，先留時間對準再讀
     let statusLeft = 0; // 結果訊息剩餘顯示時間
     let fadeLeft = 0;
     let scanTicker = 0;
     const SCAN_HINT = '整張卡背放進框內';
-    const RESULT_MS = 5000, FADE_MS = 1000, SAVED_HOLD_MS = 2000, DELETED_HOLD_MS = 4000, TICK_MS = 200;
+    const RESULT_MS = 5000, FADE_MS = 1000, SAVED_HOLD_MS = 2000, DELETED_HOLD_MS = 4000, REDO_WAIT_MS = 1600, TICK_MS = 200;
+    const DELETED_HINT = '已刪除，要重掃請先拿開卡片';
     let savingScan = false;
     let faceVotes = new Map(); // 目前這張卡各次判讀結果
     let session = [];  // 本次掃描建的卡 { id, face, barcode, codes }，最新在前
@@ -975,6 +982,7 @@
     // 面板開著時暫停所有倒數
     function tickScan() {
       if (!$('shade').hidden) return;
+      if (ignoreLeft > 0) ignoreLeft -= TICK_MS;
       if (holdLeft > 0 && (holdLeft -= TICK_MS) <= 0) justSaved = [];
       if (statusLeft > 0) {
         statusLeft -= TICK_MS;
@@ -1019,6 +1027,7 @@
       session = [];
       justSaved = [];
       holdLeft = 0;
+      ignoreLeft = 0;
       clearInterval(scanTicker);
       scanTicker = setInterval(tickScan, TICK_MS);
       $('view-scanner').classList.remove('hidden');
@@ -1202,9 +1211,13 @@
     }
 
     function onScanSuccess(decodedText) {
-      if (savingScan || !$('shade').hidden) return;
+      if (savingScan || !$('shade').hidden || ignoreLeft > 0) return;
       if (justSaved.includes(decodedText)) {
-        if (holdLeft > 0) holdLeft = holdMs; // 卡片還在鏡頭前，維持安靜
+        if (holdLeft > 0) holdLeft = holdMs; // 卡片還在鏡頭前，不重建
+        // 剛刪除的卡一直擋著時，訊息淡掉後再說明一次，避免看似相機沒反應
+        if (holdLeft > 0 && holdMs === DELETED_HOLD_MS && !pending[1] && !pending[2] && statusLeft <= 0 && fadeLeft <= 0) {
+          setScanStatus(DELETED_HINT, 'wait', false, true);
+        }
         return;
       }
       const segment = segmentOf(decodedText);
@@ -1327,7 +1340,7 @@
         <button type="button" class="btn" style="color:var(--danger)" data-act="redo">刪除重掃</button>
         <button type="button" class="btn" data-act="close">關閉</button>`, back);
       if (hasImage) $('sheet').querySelector('.photo').src = image;
-      sheetButton('redo', () => askRemoveScanned(id, fromFace, () => viewScanPhoto(id, fromFace)));
+      sheetButton('redo', () => askRemoveScanned(id, fromFace, () => viewScanPhoto(id, fromFace), true));
       sheetButton('close', back);
     }
 
@@ -1359,35 +1372,37 @@
       if (savingScan) return;
       const list = session.filter(c => c.face === value);
       if (!list.length) return closeSheet();
-      openSheet(`<div class="row justify-between"><b>$${value}・本次 ${list.length} 張</b><button type="button" class="btn" data-act="close">關閉</button></div>
+      openSheet(`<b>$${value}・本次 ${list.length} 張</b>
         <p class="muted">辨識已暫停</p>
         ${list.map(c => `<div class="sheet-row">${miniCard(value)}${shotLink(c)}${c === session[0] ? '<span class="muted">最新</span>' : ''}
           <button type="button" class="trash" data-del="${escapeHTML(c.id)}" aria-label="刪除卡號 ${escapeHTML(fullNo(c.barcode))}">${TRASH}</button></div>`).join('')}`);
-      sheetButton('close', closeSheet);
       $('sheet').querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => askRemoveScanned(btn.dataset.del, value));
       $('sheet').querySelectorAll('[data-shot]').forEach(btn => btn.onclick = () => viewScanPhoto(btn.dataset.shot, value));
     }
 
     // fromFace：由分組視窗開啟時，結束後回到該組
-    function askRemoveScanned(id, fromFace = 0, onCancel = null) {
+    // redo：刪除後直接重掃，回到掃描畫面且不要求拿開卡片
+    function askRemoveScanned(id, fromFace = 0, onCancel = null, redo = false) {
       if (savingScan) return;
       const entry = session.find(c => c.id === id);
       if (!entry) return;
-      openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(fullNo(entry.barcode))}</div>面額 $${entry.face}</div></div>
-        <p class="muted">辨識已暫停。刪除後可重新掃描。</p>
+      const cancel = onCancel || (() => fromFace ? viewScanGroup(fromFace) : closeSheet());
+      openSheet(`<b>${redo ? '刪除並重掃這張卡？' : '刪除這張卡？'}</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(fullNo(entry.barcode))}</div>面額 $${entry.face}</div></div>
+        <p class="muted">辨識已暫停。${redo ? '刪除後請重新對準，馬上重掃。' : '要重掃請先拿開卡片。'}</p>
         <button type="button" class="btn" data-act="cancel">取消</button>
-        <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`);
-      sheetButton('cancel', onCancel || (() => fromFace ? viewScanGroup(fromFace) : closeSheet()));
+        <button type="button" class="btn btn-fill-danger" data-act="delete">${redo ? '刪除重掃' : '刪除'}</button>`, cancel);
+      sheetButton('cancel', cancel);
       sheetButton('delete', () => {
         removeCard(id).then(() => {
           session = session.filter(c => c.id !== id);
-          justSaved = entry.codes;
-          holdLeft = holdMs = DELETED_HOLD_MS; // 拿開卡片後才可重掃
+          justSaved = redo ? [] : entry.codes;
+          holdLeft = holdMs = redo ? 0 : DELETED_HOLD_MS; // 一般刪除：拿開卡片後才可重掃
+          ignoreLeft = redo ? REDO_WAIT_MS : 0;
           closeSheet();
           resetPending();
-          setScanStatus('已刪除', 'wait', false, true);
+          setScanStatus(redo ? '已刪除，請重新對準' : DELETED_HINT, 'wait', false, true);
           renderSession();
-          if (fromFace) viewScanGroup(fromFace);
+          if (fromFace && !redo) viewScanGroup(fromFace);
         }).catch(() => toast('刪除失敗，請再試一次'));
       });
     }
