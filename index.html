@@ -65,10 +65,14 @@
     #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
     .scan-chip { border: 1px solid #374151; background: #1f2937; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 14px; }
     .scan-chip[aria-pressed="true"] { background: #059669; border-color: #34d399; font-weight: 700; }
-    /* 紅線固定在畫面中央；取景框依待掃段落在卡背的高度上下移動 */
-    #guide-box { position: absolute; left: 50%; top: 50%; width: 85%; max-width: 340px; aspect-ratio: 1.586 / 1; transform: translate(-50%, -60%); transition: transform .25s; }
-    #guide-box[data-target="2"] { transform: translate(-50%, -85%); }
-    .guide-seg { position: absolute; left: 5%; right: 39%; height: 15%; border: 1px dashed rgba(255,255,255,.7); border-radius: 4px; color: #fff; font-size: 11px; padding-left: 4px; }
+    /* 取景框固定不動，兩條紅線對應卡背上兩段條碼的高度，整張卡對準一次即可 */
+    #guide-box { position: absolute; left: 50%; top: 50%; width: 92%; max-width: 420px; aspect-ratio: 1.586 / 1; transform: translate(-50%, -50%); }
+    .scan-line { position: absolute; left: 3%; right: 34%; height: 2px; background: #ef4444; box-shadow: 0 0 8px red; }
+    .scan-line span { position: absolute; right: -20px; top: -10px; color: #fff; font-size: 14px; }
+    .scan-line.done { background: #34d399; box-shadow: 0 0 8px #34d399; }
+    .guide-title { position: absolute; left: 4%; top: 2%; width: 28%; height: 10%; border: 1px dashed #fca5a5; border-radius: 4px; color: #fca5a5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .guide-bars { position: absolute; left: 5%; right: 40%; height: 13%; opacity: .28; background: repeating-linear-gradient(90deg, #fff 0 2px, transparent 2px 4px, #fff 4px 5px, transparent 5px 9px); }
+    .guide-qr { position: absolute; right: 4%; top: 57%; width: 12%; aspect-ratio: 1; border: 1px dashed rgba(255,255,255,.6); border-radius: 4px; color: rgba(255,255,255,.8); font-size: 10px; display: grid; place-items: center; }
     .badge { display: inline-block; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 99px; padding: 0 8px; }
     /* 結帳條碼 */
     .co-barcode { width: 100%; height: auto; display: block; }
@@ -191,16 +195,22 @@
 
     <div class="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center">
       <div id="reader" class="w-full h-full"></div>
-      <div id="guide-box" data-target="1" class="border-2 border-emerald-400 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] pointer-events-none">
-        <span class="absolute left-3 top-2 text-xs font-bold text-red-300">商品卡 N 元</span>
-        <div class="guide-seg" style="top:52.5%">①</div>
-        <div class="guide-seg" style="top:77.5%">②</div>
+      <div id="guide-box" class="border-2 border-emerald-400 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] pointer-events-none">
+        <div class="guide-title">商品卡 N 元</div>
+        <div class="guide-bars" style="top:53.5%"></div>
+        <div class="guide-bars" style="top:78.5%"></div>
+        <div class="guide-qr">QR</div>
+        <div class="scan-line" id="line-1" style="top:60%"><span>①</span></div>
+        <div class="scan-line" id="line-2" style="top:85%"><span>②</span></div>
       </div>
-      <div id="scan-line" class="absolute inset-x-6 top-1/2 h-0.5 bg-red-500/80 shadow-[0_0_8px_red] pointer-events-none"></div>
     </div>
 
     <div class="bg-gray-900 px-4 py-3 text-white z-10">
       <p class="text-sm font-bold" id="scan-status" role="status"></p>
+      <div class="flex gap-2 mt-2" id="face-choice" hidden>
+        <button type="button" class="scan-chip" id="face-detected"></button>
+        <button type="button" class="scan-chip" id="face-preset"></button>
+      </div>
       <div class="flex justify-between items-center gap-2 mt-1 min-h-[32px]">
         <span class="text-xs text-gray-300" id="scan-progress"></span>
         <button type="button" class="scan-chip" id="scan-reset" onclick="resetPending()" hidden>重掃這張</button>
@@ -611,6 +621,7 @@
     let lastSaved = null;
     let justSaved = []; // 剛存檔的卡還在鏡頭前，不重複提示
     let savingScan = false;
+    let faceVotes = new Map(); // 目前這張卡各次判讀結果
 
     function emptyPending() {
       return { 1: null, 2: null, image: null, existing: null };
@@ -636,17 +647,20 @@
     }
 
     function updateScanUI() {
-      $('guide-box').dataset.target = pending[1] ? '2' : '1';
+      for (const seg of [1, 2]) $(`line-${seg}`).classList.toggle('done', Boolean(pending[seg]));
       const mark = seg => pending[seg] ? `✓ ${tailOf(pending[seg])}` : '未掃';
       $('scan-progress').textContent = `① ${mark(1)}　② ${mark(2)}${pending.existing ? '（補掃）' : ''}`;
       $('scan-reset').hidden = !pending[1] && !pending[2];
-      setScanStatus(pending[1] ? '① 完成。卡片往上移，把 ② 對準紅線'
-        : pending[2] ? '② 完成。把 ① 對準紅線'
-        : '照框線擺放卡背，把 ① 對準紅線');
+      setScanStatus(pending[1] ? '① 完成，讀取 ② 中，保持對準'
+        : pending[2] ? '② 完成，讀取 ① 中，保持對準'
+        : '整張卡背放進框內，兩段條碼對齊紅線');
     }
 
     function resetPending() {
       pending = emptyPending();
+      faceVotes = new Map();
+      savingScan = false;
+      $('face-choice').hidden = true;
       streaks = { 1: { value: '', count: 0 }, 2: { value: '', count: 0 } };
       updateScanUI();
     }
@@ -725,7 +739,8 @@
       { from: 0.09, to: 0.91, average: false },
       { from: 0.13, to: 0.87, average: true },
       { from: 0.18, to: 0.82, average: true },  // 銀漆灰底：只取灰底內側
-      { from: 0, to: 1, average: false }
+      { from: 0, to: 1, average: false },
+      { from: 0.02, to: 0.64, average: true, height: 0.035 } // 手持歪斜時用較薄的長條
     ];
 
     function averageColumns(ctx, width, height, margin) {
@@ -757,13 +772,13 @@
       ctx.putImageData(image, 0, 0);
     }
 
-    async function decodeBand(video) {
+    // at：長條中心在取景框內的高度比例
+    async function decodeBand(video, at) {
       const box = toVideoRect(video, $('guide-box'));
-      const line = toVideoRect(video, $('scan-line'));
-      const bandHeight = box.h * 0.07;
       const margin = 30; // 左右補白邊，作為靜音區
       const canvas = document.createElement('canvas');
       for (const variant of SCAN_VARIANTS) {
+        const bandHeight = box.h * (variant.height || 0.07);
         const width = box.w * (variant.to - variant.from);
         const outWidth = Math.max(800, Math.round(width));
         canvas.width = outWidth + margin * 2;
@@ -771,7 +786,7 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(video, box.x + box.w * variant.from, line.y + line.h / 2 - bandHeight / 2, width, bandHeight, margin, 0, outWidth, canvas.height);
+        ctx.drawImage(video, box.x + box.w * variant.from, box.y + box.h * at - bandHeight / 2, width, bandHeight, margin, 0, outWidth, canvas.height);
         if (variant.average) averageColumns(ctx, canvas.width, canvas.height, margin);
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         try {
@@ -785,14 +800,28 @@
       return null;
     }
 
+    const LINE_AT = { 1: 0.60, 2: 0.85 };
+    const OFFSETS = [-0.05, 0.05, -0.1, 0.1];
+    let offsetTurn = 0;
+
+    // 尚未讀到的段落：先讀紅線本身，再輪流試上下偏移
+    function scanPositions() {
+      const missing = [1, 2].filter(seg => !pending[seg]);
+      const offset = OFFSETS[offsetTurn++ % OFFSETS.length];
+      return [...missing.map(seg => LINE_AT[seg]), ...missing.map(seg => LINE_AT[seg] + offset)];
+    }
+
     async function decodeLoop(request) {
       // formatsToSupport 屬於建構子選項
       decoder = decoder || new Html5Qrcode('decode-area', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128], verbose: false });
       if (request !== cameraRequest || !camera) return;
       if (camera.video.videoWidth) {
-        const text = await decodeBand(camera.video);
-        if (request !== cameraRequest || !camera) return;
-        if (text) onScanSuccess(text);
+        for (const at of scanPositions()) {
+          if ((pending[1] || pending[2]) && !savingScan) sampleFaceValue();
+          const text = await decodeBand(camera.video, at);
+          if (request !== cameraRequest || !camera) return;
+          if (text) onScanSuccess(text);
+        }
       }
       camera.timer = setTimeout(() => decodeLoop(request), 80);
     }
@@ -843,25 +872,50 @@
         pending.existing = found;
       }
 
+      if (!pending[1] && !pending[2]) faceVotes = new Map(); // 丟掉上一張卡的殘留判讀
       pending[segment] = value;
       if (segment === 1) pending.image = captureCroppedCardImage();
+      sampleFaceValue();
 
       if (navigator.vibrate) navigator.vibrate(60);
       const guideBox = $('guide-box');
       guideBox.classList.replace('border-emerald-400', 'border-yellow-300');
       setTimeout(() => guideBox.classList.replace('border-yellow-300', 'border-emerald-400'), 300);
 
-      if (pending[1] && pending[2]) savePending();
+      if (pending[1] && pending[2]) finishCard();
       else updateScanUI();
     }
 
-    function savePending() {
+    // 面額：判讀與預選一致→存；不一致→讓使用者選；判不出→用預選並標示未核對
+    function finishCard() {
+      if (pending.existing) return savePending(pending.existing.initialAmount, '');
+      const detected = confirmedFaceValue();
+      if (!detected) return savePending(presetAmount, '（面額未核對）');
+      if (detected === presetAmount) return savePending(detected, '（面額已核對）');
+
+      savingScan = true; // 等使用者選擇前不再讀取
+      updateScanUI();
+      setScanStatus(`面額不一致：卡面讀到 $${detected}，預選 $${presetAmount}`, true);
+      const choose = (value, note) => {
+        $('face-choice').hidden = true;
+        savePending(value, note);
+      };
+      $('face-detected').textContent = `用卡面 $${detected}`;
+      $('face-detected').onclick = () => choose(detected, '（依卡面）');
+      const preset = presetAmount;
+      $('face-preset').textContent = `用預選 $${preset}`;
+      $('face-preset').onclick = () => choose(preset, '（依預選）');
+      $('face-choice').hidden = false;
+      $('scan-reset').hidden = false;
+    }
+
+    function savePending(face, note) {
       savingScan = true;
       const { existing, image } = pending;
       const values = [pending[1], pending[2]];
       const card = existing
         ? { ...existing, barcode2: pending[2], cropImage: image || existing.cropImage }
-        : { ...newCard(pending[1], presetAmount, presetAmount, image), barcode2: pending[2] };
+        : { ...newCard(pending[1], face, face, image), barcode2: pending[2] };
 
       saveCardToDB(card).then(() => {
         lastSaved = { card, previous: existing ? { ...existing } : null };
@@ -871,12 +925,12 @@
         $('scan-last').hidden = false;
         $('scan-last-img').hidden = !card.cropImage;
         if (card.cropImage) $('scan-last-img').src = card.cropImage;
-        $('scan-last-text').textContent = `${existing ? '已補掃' : '已存'} ${tailOf(card.barcode)}　面額 $${card.initialAmount}`;
+        $('scan-last-text').textContent = `${existing ? '已補掃' : '已存'} ${tailOf(card.barcode)}　面額 $${card.initialAmount}${note}`;
         resetPending();
       }).catch(() => {
         resetPending();
         setScanStatus('儲存失敗，請重掃這張', true);
-      }).finally(() => savingScan = false);
+      });
     }
 
     function undoLastScan() {
@@ -901,6 +955,121 @@
       input.value = '';
       justSaved = [];
       acceptSegment(1, code);
+    }
+
+    // ===== 左上紅字面額判讀 =====
+    // 只在固定面額中判斷；任何不確定都回傳 null，不猜
+    function detectFaceValue(canvas) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const { width, height } = canvas;
+      const data = ctx.getImageData(0, 0, width, height).data;
+      const red = new Uint8Array(width * height);
+      for (let p = 0, i = 0; p < red.length; p++, i += 4) {
+        if (data[i] > 80 && data[i] - data[i + 1] > 45 && data[i] - data[i + 2] > 25) red[p] = 1;
+      }
+
+      const runs = (size, filled) => {
+        const out = [];
+        let start = -1;
+        for (let i = 0; i <= size; i++) {
+          const on = i < size && filled(i);
+          if (on && start < 0) start = i;
+          if (!on && start >= 0) { out.push([start, i]); start = -1; }
+        }
+        return out;
+      };
+
+      // 標題是紅字中最高的一行
+      const lines = runs(height, y => { let n = 0; for (let x = 0; x < width; x++) n += red[y * width + x]; return n > 1; });
+      if (!lines.length) return null;
+      const [top, bottom] = lines.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
+      if (bottom - top < 14) return null; // 太小無法判讀
+
+      const glyphs = runs(width, x => { for (let y = top; y < bottom; y++) if (red[y * width + x]) return true; return false; })
+        .map(([x0, x1]) => {
+          let y0 = bottom;
+          let y1 = top;
+          for (let y = top; y < bottom; y++) {
+            for (let x = x0; x < x1; x++) {
+              if (red[y * width + x]) { y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1); break; }
+            }
+          }
+          return { x0, y0, w: x1 - x0, h: y1 - y0 };
+        })
+        .filter(g => g.w > 1 && g.h > (bottom - top) * 0.3);
+      if (glyphs.length < 5) return null;
+
+      // 結尾是較矮的「元」，往前連續的高窄字元即數字
+      const tall = Math.max(...glyphs.map(g => g.h));
+      if (glyphs[glyphs.length - 1].h > tall * 0.8) return null;
+      const digits = [];
+      for (let i = glyphs.length - 2; i >= 0; i--) {
+        const g = glyphs[i];
+        if (g.h < tall * 0.8 || g.w / g.h > 0.75) break;
+        digits.unshift(g);
+      }
+      if (digits.length < 2 || digits.length > 4) return null;
+
+      const value = Number(digits.map(g => classifyDigit(red, width, g)).join(''));
+      return FACE_VALUES.includes(value) ? value : null;
+    }
+
+    // 面額只會出現 0、1、2、3、5
+    function classifyDigit(red, stride, { x0, y0, w, h }) {
+      const ink = (x, y) => red[(y0 + y) * stride + x0 + x] === 1;
+      if (w / h < 0.4) return '1';
+
+      // 封閉空洞：外圍淹水後仍未到達的背景
+      const W = w + 2;
+      const seen = new Uint8Array(W * (h + 2));
+      const blank = (x, y) => x < 1 || y < 1 || x > w || y > h || !ink(x - 1, y - 1);
+      const stack = [[0, 0]];
+      seen[0] = 1;
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+          if (nx < 0 || ny < 0 || nx >= W || ny >= h + 2 || seen[ny * W + nx] || !blank(nx, ny)) continue;
+          seen[ny * W + nx] = 1;
+          stack.push([nx, ny]);
+        }
+      }
+      let enclosed = 0;
+      for (let y = 1; y <= h; y++) for (let x = 1; x <= w; x++) if (blank(x, y) && !seen[y * W + x]) enclosed++;
+      if (enclosed > w * h * 0.08) return '0';
+
+      // 筆畫重心偏左或偏右：2＝右左、5＝左右、3＝右右
+      const side = (from, to) => {
+        let sum = 0;
+        let n = 0;
+        for (let y = Math.floor(h * from); y < Math.ceil(h * to); y++) {
+          for (let x = 0; x < w; x++) if (ink(x, y)) { sum += (x + 0.5) / w; n++; }
+        }
+        return !n ? '?' : sum / n > 0.54 ? 'R' : sum / n < 0.46 ? 'L' : '?';
+      };
+      const shape = side(0.22, 0.38) + side(0.62, 0.76);
+      return { RL: '2', LR: '5', RR: '3' }[shape] || 'x';
+    }
+
+    // 以影像原始解析度裁出取景框左上角
+    function sampleFaceValue() {
+      if (!camera || !camera.video.videoWidth) return;
+      const box = toVideoRect(camera.video, $('guide-box'));
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = Math.round(640 * (box.h * 0.2) / (box.w * 0.42));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(camera.video, box.x, box.y - box.h * 0.03, box.w * 0.42, box.h * 0.2, 0, 0, canvas.width, canvas.height);
+      const value = detectFaceValue(canvas);
+      if (value) faceVotes.set(value, (faceVotes.get(value) || 0) + 1);
+    }
+
+    // 至少兩次且沒有其他答案才算有把握
+    function confirmedFaceValue() {
+      if (faceVotes.size !== 1) return null;
+      const [value, count] = [...faceVotes][0];
+      return count >= 2 ? value : null;
     }
 
     // ===== 結帳 =====
