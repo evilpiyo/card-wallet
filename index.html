@@ -151,7 +151,10 @@
     .scan-status.fading #scan-status, .scan-status.fading #scan-dot { opacity: 0; transition-duration: 1s; }
     @media (prefers-reduced-motion: reduce) { #scan-status, #scan-dot { transition: none !important; } }
     .scan-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #60a5fa; flex: none; }
-    .latest { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; }
+    .latest { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; }
+    .shot-link { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 0; background: none; border: 0; color: inherit; cursor: pointer; }
+    .shot-link .num { text-decoration: underline; text-underline-offset: 3px; }
+    .shot-link .ic { width: 16px; height: 16px; opacity: .7; }
     .trash { width: 44px; height: 36px; display: grid; place-items: center; flex: none; margin-left: auto; background: none; border: 0; color: inherit; }
     .groups { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px env(safe-area-inset-bottom); }
     .grp { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 52px; padding: 5px 0; background: none; border: 0; border-bottom: 1px solid #252b33; color: inherit; text-align: left; }
@@ -936,12 +939,13 @@
     let pending;       // 目前這張卡已讀到的段落
     let streaks;
     let justSaved = []; // 剛存檔或剛刪除的卡還在鏡頭前，不重複處理
-    let holdLeft = 0;   // 剛刪除的卡：連續這麼久沒讀到才解除抑制
+    let holdLeft = 0;   // 剛存檔或剛刪除的卡：連續這麼久沒讀到才解除抑制
+    let holdMs = 0;
     let statusLeft = 0; // 結果訊息剩餘顯示時間
     let fadeLeft = 0;
     let scanTicker = 0;
     const SCAN_HINT = '整張卡背放進框內';
-    const RESULT_MS = 5000, FADE_MS = 1000, HOLD_MS = 4000, TICK_MS = 200;
+    const RESULT_MS = 5000, FADE_MS = 1000, SAVED_HOLD_MS = 2000, DELETED_HOLD_MS = 4000, TICK_MS = 200;
     let savingScan = false;
     let faceVotes = new Map(); // 目前這張卡各次判讀結果
     let session = [];  // 本次掃描建的卡 { id, face, barcode, codes }，最新在前
@@ -1200,7 +1204,7 @@
     function onScanSuccess(decodedText) {
       if (savingScan || !$('shade').hidden) return;
       if (justSaved.includes(decodedText)) {
-        if (holdLeft > 0) holdLeft = HOLD_MS; // 剛刪除的卡還在鏡頭前，繼續擋
+        if (holdLeft > 0) holdLeft = holdMs; // 卡片還在鏡頭前，維持安靜
         return;
       }
       const segment = segmentOf(decodedText);
@@ -1290,7 +1294,7 @@
       return addCard(card).then(() => {
         session.unshift({ id: card.id, face, barcode: card.barcode, codes });
         justSaved = codes;
-        holdLeft = 0;
+        holdLeft = holdMs = SAVED_HOLD_MS; // 拿開後再掃，提示「已存在」
         resetPending();
         setZone('face', 'ok'); setZone(1, 'ok'); setZone(2, 'ok');
         $('guide-box').classList.add('saved');
@@ -1303,6 +1307,30 @@
       });
     }
 
+    // 卡號＋圖片小圖示，點了看建檔時的原圖
+    function shotLink(entry) {
+      return `<button type="button" class="shot-link" data-shot="${escapeHTML(entry.id)}" aria-label="看原圖 ${escapeHTML(fullNo(entry.barcode))}"><span class="num">${escapeHTML(fullNo(entry.barcode))}</span>
+        <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg></button>`;
+    }
+
+    // fromFace：由分組視窗開啟時，關閉後回到該組
+    function viewScanPhoto(id, fromFace = 0) {
+      if (savingScan) return;
+      const entry = session.find(c => c.id === id);
+      if (!entry) return;
+      const back = () => fromFace ? viewScanGroup(fromFace) : closeSheet();
+      const image = String(findCard(id)?.cropImage || '');
+      const hasImage = image.startsWith('data:image/');
+      openSheet(`<div class="row justify-between"><span class="num">${escapeHTML(fullNo(entry.barcode))}</span><b>面額 $${entry.face}</b></div>
+        ${hasImage ? '<img class="photo" alt="卡背原圖">' : '<p class="muted text-center py-10">沒有原圖</p>'}
+        <p class="muted">辨識已暫停</p>
+        <button type="button" class="btn" style="color:var(--danger)" data-act="redo">刪除重掃</button>
+        <button type="button" class="btn" data-act="close">關閉</button>`, back);
+      if (hasImage) $('sheet').querySelector('.photo').src = image;
+      sheetButton('redo', () => askRemoveScanned(id, fromFace, () => viewScanPhoto(id, fromFace)));
+      sheetButton('close', back);
+    }
+
     // ----- 本次清單：最新一張＋依面額分組 -----
     function renderSession(bumpFace = 0) {
       const total = session.reduce((sum, c) => sum + c.face, 0);
@@ -1311,14 +1339,17 @@
       const last = session[0];
       $('scan-latest').innerHTML = last ? `<span style="color:#9ca3af">最新</span>
         <b class="text-lg ${faceClass(last.face)}" style="color:var(--tone)">$${last.face}</b>
-        <span class="num">${escapeHTML(tail8(last.barcode))}</span>
+        ${shotLink(last)}
         <button type="button" class="trash" aria-label="刪除最新一張">${TRASH}</button>` : '';
-      if (last) $('scan-latest').querySelector('.trash').onclick = () => askRemoveScanned(last.id);
+      if (last) {
+        $('scan-latest').querySelector('.trash').onclick = () => askRemoveScanned(last.id);
+        $('scan-latest').querySelector('[data-shot]').onclick = () => viewScanPhoto(last.id);
+      }
 
       $('scan-groups').innerHTML = FACE_VALUES.filter(v => session.some(c => c.face === v)).map(value => {
         const list = session.filter(c => c.face === value);
         return `<button type="button" class="grp ${value === bumpFace ? 'bump' : ''}" data-value="${value}">${miniCard(value)}
-          <b class="text-lg w-12">× ${list.length}</b><span class="num flex-1">${escapeHTML(tail8(list[0].barcode))}</span>
+          <b class="text-lg w-12">× ${list.length}</b><span class="num flex-1">${escapeHTML(fullNo(list[0].barcode))}</span>
           <span class="text-xs" style="color:#9ca3af">檢視 ›</span></button>`;
       }).join('') || '<p class="text-sm text-center pt-5" style="color:#9ca3af">掃描成功的卡會依面額出現在這裡</p>';
       $('scan-groups').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => viewScanGroup(Number(btn.dataset.value)));
@@ -1330,27 +1361,28 @@
       if (!list.length) return closeSheet();
       openSheet(`<div class="row justify-between"><b>$${value}・本次 ${list.length} 張</b><button type="button" class="btn" data-act="close">關閉</button></div>
         <p class="muted">辨識已暫停</p>
-        ${list.map(c => `<div class="sheet-row">${miniCard(value)}<span class="num">${escapeHTML(tail8(c.barcode))}</span>${c === session[0] ? '<span class="muted">最新</span>' : ''}
-          <button type="button" class="trash" data-del="${escapeHTML(c.id)}" aria-label="刪除末碼 ${escapeHTML(tail8(c.barcode))}">${TRASH}</button></div>`).join('')}`);
+        ${list.map(c => `<div class="sheet-row">${miniCard(value)}${shotLink(c)}${c === session[0] ? '<span class="muted">最新</span>' : ''}
+          <button type="button" class="trash" data-del="${escapeHTML(c.id)}" aria-label="刪除卡號 ${escapeHTML(fullNo(c.barcode))}">${TRASH}</button></div>`).join('')}`);
       sheetButton('close', closeSheet);
       $('sheet').querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => askRemoveScanned(btn.dataset.del, value));
+      $('sheet').querySelectorAll('[data-shot]').forEach(btn => btn.onclick = () => viewScanPhoto(btn.dataset.shot, value));
     }
 
     // fromFace：由分組視窗開啟時，結束後回到該組
-    function askRemoveScanned(id, fromFace = 0) {
+    function askRemoveScanned(id, fromFace = 0, onCancel = null) {
       if (savingScan) return;
       const entry = session.find(c => c.id === id);
       if (!entry) return;
-      openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(tail8(entry.barcode))}</div>面額 $${entry.face}</div></div>
+      openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(fullNo(entry.barcode))}</div>面額 $${entry.face}</div></div>
         <p class="muted">辨識已暫停。刪除後可重新掃描。</p>
         <button type="button" class="btn" data-act="cancel">取消</button>
         <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`);
-      sheetButton('cancel', () => fromFace ? viewScanGroup(fromFace) : closeSheet());
+      sheetButton('cancel', onCancel || (() => fromFace ? viewScanGroup(fromFace) : closeSheet()));
       sheetButton('delete', () => {
         removeCard(id).then(() => {
           session = session.filter(c => c.id !== id);
           justSaved = entry.codes;
-          holdLeft = HOLD_MS; // 拿開卡片後才可重掃
+          holdLeft = holdMs = DELETED_HOLD_MS; // 拿開卡片後才可重掃
           closeSheet();
           resetPending();
           setScanStatus('已刪除', 'wait', false, true);
