@@ -1,6 +1,6 @@
 // 離線使用：安裝時把整個 app 存進手機，之後一律從手機讀取。
 // VERSION 依檔案內容產生：public/ 任何檔案有改，部署前執行 python docs/tools/sw_version.py
-const VERSION = 'card-vault-3e1a748aff';
+const VERSION = 'card-vault-919371fe9b';
 const FILES = [
   'index.html',
   'manifest.json',
@@ -15,7 +15,13 @@ const FILES = [
   'cards/card-100.svg',
   'cards/card-200.svg',
   'cards/card-500.svg',
-  'cards/card-1000.svg'
+  'cards/card-1000.svg',
+  'cards/card-35-wide.svg',
+  'cards/card-50-wide.svg',
+  'cards/card-100-wide.svg',
+  'cards/card-200-wide.svg',
+  'cards/card-500-wide.svg',
+  'cards/card-1000-wide.svg'
 ];
 
 // 全部抓到才算安裝成功；任一失敗就維持舊版
