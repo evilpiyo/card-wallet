@@ -58,12 +58,12 @@
     .hero-bar, .hero-label, .hero-total { position: relative; }
     .hero-bar { display: flex; align-items: center; gap: 8px; }
     .hero-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 23px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(100deg, var(--t1), var(--t2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    @media (max-width: 359px) { .hero-title { font-size: 20px; letter-spacing: 0; } }
     .bell { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e6e2d9; background: rgba(255,255,255,.92); color: #1d1d1b; display: grid; place-items: center; }
     .bell.due::after { content: ""; position: absolute; top: 6px; right: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); border: 2px solid #fff; }
     .hero-label { margin-top: 6px; width: fit-content; max-width: 70%; font-size: 14px; color: #4d4a45; }
     .hero-total { font-size: 58px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; }
     .hero-date { position: absolute; left: 20px; right: 20px; bottom: 23px; display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; line-height: 18px; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
-    .popover { position: absolute; top: 66px; right: 16px; width: 230px; z-index: 5; display: flex; flex-direction: column; gap: 10px; font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
     .pay { flex: 1; height: 58px; font-size: 20px; border-radius: 16px; }
 
     /* 扇形手牌：彩色＝可用、淡化＝已用完、灰階＝沒有 */
@@ -154,7 +154,7 @@
     .group { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
     .group > * { display: flex; width: 100%; align-items: center; gap: 12px; padding: 14px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; }
     .group > *:last-child { border-bottom: 0; }
-    .group > .primary { background: var(--action); color: var(--on-action); font-weight: 700; }
+    .remind { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; background: var(--surface); color: var(--text); font-size: 16px; }
     .ic { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .home-check { flex: none; background: none; border: 0; color: var(--warn); font-size: 14px; line-height: 20px; text-decoration: underline; padding: 0 20px; cursor: pointer; }
 
@@ -347,8 +347,8 @@
         <div class="hero-bg" id="hero-bg"></div>
         <div class="hero-bar">
           <h1 class="hero-title" data-key="cv-title" data-default="小七商品卡匣"></h1>
-          <button class="bell" id="bell" onclick="toggleBackupPopover()" aria-label="備份提醒" aria-expanded="false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8"/><path d="M10 21h4"/></svg>
+          <button class="bell" id="btn-add" onclick="openScanner()" aria-label="新增卡片">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M12 9v6M9 12h6"/></svg>
           </button>
           <button class="bell" id="btn-settings" onclick="showPage('view-settings')" aria-label="設定">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.85a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
@@ -368,16 +368,6 @@
       <section class="recent" id="recent"><h3>最近消費</h3><ul id="recent-list"></ul></section>
     </div>
 
-    <div class="popover" id="backup-popover" hidden>
-      <span>上次備份：<b id="backup-last">尚未備份</b></span>
-      <label>提醒週期
-        <select id="remind-days" class="field" onchange="setRemindDays(this.value)">
-          <option value="0">不提醒</option><option value="7">每 7 天</option><option value="14">每 14 天</option><option value="30">每 30 天</option>
-        </select>
-      </label>
-      <button class="btn btn-primary" onclick="exportData()">立即備份</button>
-    </div>
-
     <p class="muted text-center" id="pay-hint" hidden>目前沒有可付款的卡片</p>
     <div class="page-bar">
       <button class="btn btn-primary pay" id="btn-pay" onclick="openPay()">付款</button>
@@ -389,7 +379,6 @@
     <div class="page-body">
       <h2 class="page-title">設定</h2>
       <div class="group">
-        <button type="button" class="primary" onclick="openScanner()"><svg class="ic" viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6"/></svg>新增卡片</button>
         <button type="button" onclick="openCards()"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>卡片管理</button>
       </div>
       <div class="group">
@@ -400,6 +389,11 @@
       </div>
       <div class="group">
         <button type="button" onclick="exportData()"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="flex-1">備份<br><span class="muted" id="settings-backup"></span></span><span class="badge" id="settings-due" hidden>該備份了</span></button>
+        <label><svg class="ic" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8M10 21h4"/></svg><span class="flex-1">備份提醒</span>
+          <select id="remind-days" class="remind" onchange="setRemindDays(this.value)">
+            <option value="0">不提醒</option><option value="7">每 7 天</option><option value="14">每 14 天</option><option value="30">每 30 天</option>
+          </select>
+        </label>
         <label><svg class="ic" viewBox="0 0 24 24"><path d="M12 16V5M7 10l5-5 5 5M5 20h14"/></svg>還原
           <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
         </label>
@@ -480,7 +474,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.27・8af1530'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.27・e785d6f'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -612,8 +606,6 @@
     function showPage(id) {
       document.querySelectorAll('.sub-page').forEach(page => page.hidden = page.id !== id);
       $('view-home').hidden = Boolean(id);
-      $('backup-popover').hidden = true;
-      $('bell').setAttribute('aria-expanded', 'false');
       closeSheet();
       if (id === 'view-text') {
         document.querySelectorAll('[data-text]').forEach(input => input.value = textOf(input.dataset.text));
@@ -815,7 +807,7 @@
       renderHomeEmpty(cards.length);
       renderDenominations(cards);
       renderRecent();
-      renderBell();
+      renderBackup();
     }
 
     // 有提示時取代面額小計；兩則以上時少顯示一筆消費
@@ -1344,34 +1336,23 @@
       return Number(readPref('cv-remind') ?? 14);
     }
 
-    function renderBell() {
+    // 備份提醒：該備份時齒輪顯示紅點，設定頁「備份」列註明
+    function renderBackup() {
       const last = Number(readPref('cv-last-backup')) || 0;
       const days = Math.floor((Date.now() - last) / 86400000);
       const period = remindDays();
-      $('bell').classList.toggle('due', period > 0 && allCards.length > 0 && (!last || days >= period));
-      $('backup-last').textContent = !last ? '尚未備份' : days === 0 ? '今天' : `${days} 天前`;
-      $('settings-backup').textContent = `上次：${$('backup-last').textContent}`;
-      $('settings-due').hidden = !$('bell').classList.contains('due');
+      const due = period > 0 && allCards.length > 0 && (!last || days >= period);
+      $('btn-settings').classList.toggle('due', due);
+      $('btn-settings').setAttribute('aria-label', due ? '設定（該備份了）' : '設定');
+      $('settings-backup').textContent = `上次：${!last ? '尚未備份' : days === 0 ? '今天' : `${days} 天前`}`;
+      $('settings-due').hidden = !due;
       $('remind-days').value = String(period);
     }
 
     function setRemindDays(value) {
       writePref('cv-remind', value);
-      renderBell();
+      renderBackup();
     }
-
-    function toggleBackupPopover() {
-      const pop = $('backup-popover');
-      pop.hidden = !pop.hidden;
-      $('bell').setAttribute('aria-expanded', !pop.hidden);
-    }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#backup-popover, #bell')) {
-        $('backup-popover').hidden = true;
-        $('bell').setAttribute('aria-expanded', 'false');
-      }
-    });
 
     function newCard(barcode, face, balance, cropImage) {
       const createdAt = Date.now();
@@ -2533,7 +2514,7 @@
       a.download = `711_cards_backup_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
       writePref('cv-last-backup', Date.now()); // 只能確認已觸發下載
-      renderBell();
+      renderBackup();
     }
 
     const MAX_IMAGE_CHARS = 2800000; // 約 2 MB 圖片的 base64 長度
