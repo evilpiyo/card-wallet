@@ -17,7 +17,15 @@
     video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     #guide { position: absolute; left: 50%; top: 12%; transform: translateX(-50%); width: min(76%, 340px, 80vh); aspect-ratio: 1.586; }
-    #status { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-weight: 700; text-shadow: 0 1px 4px #000; padding: 0 16px; }
+    #status { position: absolute; left: -15%; right: -15%; top: calc(100% + 16px); text-align: center; font-size: 19px; font-weight: 700; text-shadow: 0 1px 4px #000; }
+    #fx { position: absolute; inset: 0; pointer-events: none; }
+    #fx[hidden] { display: none; }
+    #flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash .35s ease-out; }
+    #shutter { position: absolute; width: 130px; height: 130px; margin: -65px 0 0 -65px; opacity: 0; animation: shutter .5s ease-in-out; }
+    @keyframes flash { 25% { opacity: .75; } }
+    @keyframes shutter { 0% { opacity: 0; transform: scale(1.35) rotate(0); } 35% { opacity: .7; } 70% { opacity: .7; transform: scale(.8) rotate(55deg); } 100% { opacity: 0; transform: scale(.8) rotate(55deg); } }
+    @keyframes fade { 40% { opacity: .5; } }
+    @media (prefers-reduced-motion: reduce) { #flash { animation-name: fade; } #shutter { animation-name: fade; } }
     footer { flex: none; padding: 8px 16px calc(env(safe-area-inset-bottom) + 12px); }
     footer p { margin: 0 0 8px; font-size: 12px; color: #9ca3af; text-align: center; }
     button { width: 100%; min-height: 46px; border: 0; border-radius: 12px; font: inherit; font-weight: 700; background: #374151; color: #fff; }
@@ -33,8 +41,14 @@
   <div id="stage">
     <video id="video" muted playsinline></video>
     <canvas id="overlay"></canvas>
-    <div id="guide"></div>
-    <div id="status">啟動相機中</div>
+    <div id="guide"><div id="status">啟動相機中</div></div>
+    <div id="fx" hidden>
+      <div id="flash"></div>
+      <svg id="shutter" viewBox="-50 -50 100 100" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" aria-hidden="true">
+        <circle r="44" fill="rgba(0,0,0,.35)"/>
+        <path d="M0-44 21-8M38-22 19 14M38 22H-3M0 44-21 8M-38 22-19-14M-38-22H3"/>
+      </svg>
+    </div>
   </div>
   <footer>
     <p id="stats">尚未鎖定</p>
@@ -53,7 +67,10 @@ const MARGIN = 0.15;      // 取景框外搜尋範圍（相對框寬）
 const SMALL = 400;        // 偵測用影像寬
 const EDGE = 22;          // 相鄰像素差達此值視為邊緣
 const MIN_SCORE = 0.55;   // 一條邊至少要有這麼多取樣點是邊緣
-const LOCK_MS = 300;      // 四角穩定多久才拍
+const LOCK_MS = 1000;     // 對準後要穩定多久才拍
+const MOVE = 0.025;       // 倒數中角點偏離起點超過框寬的這個比例就重算
+const COOLDOWN_MS = 600;  // 按「下一張」後多久內不倒數
+const SHOT_MS = 500;      // 拍照動畫長度
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
 // ---------- 偵測 ----------
@@ -183,7 +200,8 @@ const $ = id => document.getElementById(id);
 const video = $('video');
 const full = document.createElement('canvas');   // 目前影格（原始解析度）
 const small = document.createElement('canvas');  // 偵測用
-let stream = null, timer = 0, startedAt = 0, stableSince = 0, last = null, frame = null;
+let stream = null, timer = 0, startedAt = 0, readyAt = 0, frame = null, capturing = false;
+let anchor = null, since = 0, misses = 0, best = null; // 倒數起點、漏抓格數、期間最清晰的影格
 const locks = [];
 
 // 取景框（含外圍搜尋範圍）換算成影像座標
@@ -214,7 +232,8 @@ function analyze() {
   return { ...found, box, region: r, toFull: full.width / SMALL, cost: performance.now() - started };
 }
 
-function hint(result) {
+// 需要調整的提示；空字串代表對準了。拉正可修掉小幅歪斜與遠近，門檻從寬
+function advice(result) {
   const { quad, sides, box } = result;
   if (!quad) {
     const missing = SIDES.filter(s => !sides[s]).map(s => ({ top: '上', right: '右', bottom: '下', left: '左' })[s]);
@@ -223,19 +242,35 @@ function hint(result) {
     return '放平、對齊框線';
   }
   const m = measure(quad);
-  if (m.w < box.w * 0.88) return '靠近一點';
-  if (m.w > box.w * 1.1) return '拿遠一點';
-  if (m.cx - (box.x + box.w / 2) > box.w * 0.06) return '卡片往左一點';
-  if (box.x + box.w / 2 - m.cx > box.w * 0.06) return '卡片往右一點';
-  if (m.cy - (box.y + box.h / 2) > box.h * 0.08) return '卡片往上一點';
-  if (box.y + box.h / 2 - m.cy > box.h * 0.08) return '卡片往下一點';
-  if (Math.abs(m.tilt) > 4) return '轉正一點';
-  if (m.skew > 1.06) return '手機放平一點';
-  return '鎖定中，保持不動';
+  if (m.w < box.w * 0.84) return '靠近一點';
+  if (m.w > box.w * 1.14) return '拿遠一點';
+  if (m.cx - (box.x + box.w / 2) > box.w * 0.09) return '卡片往左一點';
+  if (box.x + box.w / 2 - m.cx > box.w * 0.09) return '卡片往右一點';
+  if (m.cy - (box.y + box.h / 2) > box.h * 0.11) return '卡片往上一點';
+  if (box.y + box.h / 2 - m.cy > box.h * 0.11) return '卡片往下一點';
+  if (Math.abs(m.tilt) > 7) return '轉正一點';
+  if (m.skew > 1.09) return '手機放平一點';
+  return '';
 }
 
-// 四角標記：灰＝沒抓到、黃＝兩邊都看到但組不成卡片、綠＝已抓到
-function paint(result) {
+// 清晰度：卡片中央相鄰像素差的平方平均，越大越清楚
+function sharpness(result) {
+  const f = result.toFull, m = measure(result.quad);
+  const w = Math.round(m.w * f * 0.7), h = Math.round(m.h * f * 0.7);
+  const { data } = full.getContext('2d').getImageData(Math.round(m.cx * f - w / 2), Math.round(m.cy * f - h / 2), w, h);
+  let sum = 0, count = 0;
+  for (let y = 0; y < h; y += 4) {
+    for (let x = 1; x < w; x++, count++) {
+      const i = (y * w + x) * 4 + 1, d = data[i] - data[i - 4];
+      sum += d * d;
+    }
+  }
+  return sum / count;
+}
+
+// 四角標記：灰＝沒抓到、黃＝兩邊都看到但組不成卡片、綠＝已抓到、藍＝倒數中
+// 抓到卡片畫外框；倒數時整張蓋半透明藍，外框依進度填滿；拍下時轉綠
+function paint(result, quad, progress, shot) {
   const canvas = $('overlay'), r = result.region, ratio = window.devicePixelRatio || 1;
   canvas.width = r.view.width * ratio;
   canvas.height = r.view.height * ratio;
@@ -243,66 +278,140 @@ function paint(result) {
   ctx.scale(ratio, ratio);
   const x = r.box.left - r.view.left, y = r.box.top - r.view.top, w = r.box.width, h = r.box.height, len = w * 0.1;
   const corners = [[x, y, 1, 1, 'top', 'left'], [x + w, y, -1, 1, 'top', 'right'], [x + w, y + h, -1, -1, 'bottom', 'right'], [x, y + h, 1, -1, 'bottom', 'left']];
+  const tone = shot ? '#4ade80' : progress !== null ? '#60a5fa' : null;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   for (const [cx, cy, sx, sy, a, b] of corners) {
-    ctx.strokeStyle = result.quad ? '#4ade80' : result.sides[a] && result.sides[b] ? '#facc15' : 'rgba(255,255,255,.55)';
+    ctx.strokeStyle = tone || (quad ? '#4ade80' : result.sides[a] && result.sides[b] ? '#facc15' : 'rgba(255,255,255,.55)');
     ctx.beginPath();
     ctx.moveTo(cx, cy + sy * len);
     ctx.lineTo(cx, cy);
     ctx.lineTo(cx + sx * len, cy);
     ctx.stroke();
   }
-  if (!result.quad) return;
-  // 實際抓到的外框
-  const point = p => [(r.x + p.x / SMALL * r.w) * r.scale + r.offsetX, (r.y + p.y / SMALL * r.w) * r.scale + r.offsetY];
+  if (!quad) return;
+  const points = quad.map(p => toScreen(r, p));
+  const trace = () => {
+    ctx.beginPath();
+    points.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](...p));
+    ctx.closePath();
+  };
+  trace();
+  if (tone) {
+    ctx.fillStyle = shot ? 'rgba(74,222,128,.34)' : 'rgba(59,130,246,.32)';
+    ctx.fill();
+  }
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#4ade80';
-  ctx.beginPath();
-  result.quad.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](...point(p)));
-  ctx.closePath();
+  ctx.strokeStyle = tone || '#4ade80';
   ctx.stroke();
+  if (progress === null || shot) return;
+  const lengths = points.map((p, i) => Math.hypot(points[(i + 1) % 4][0] - p[0], points[(i + 1) % 4][1] - p[1]));
+  const total = lengths.reduce((a, b) => a + b, 0);
+  trace();
+  ctx.setLineDash([total * progress, total]);
+  ctx.lineWidth = 7;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// 偵測座標換算成畫面座標
+function toScreen(r, p) {
+  return [(r.x + p.x / SMALL * r.w) * r.scale + r.offsetX, (r.y + p.y / SMALL * r.w) * r.scale + r.offsetY];
+}
+
+function reset() {
+  anchor = best = null;
+  misses = 0;
 }
 
 function tick() {
-  if (!stream || !$('result').hidden) return;
+  if (!stream || !$('result').hidden || capturing) return;
   if (video.videoWidth) {
-    const result = analyze(), now = performance.now();
+    const result = analyze(), now = performance.now(), text = advice(result);
     frame = result;
-    paint(result);
-    $('status').textContent = hint(result);
-    const limit = result.box.w * 0.025;
-    const steady = result.quad && last && result.quad.every((p, i) => dist(p, last[i]) < limit);
-    if (!steady) stableSince = now;
-    last = result.quad;
-    if (steady && now - stableSince >= LOCK_MS) return show(result, true);
+    const aligned = !text && now >= readyAt;
+    if (aligned) {
+      if (anchor && result.quad.some((p, i) => dist(p, anchor[i]) > result.box.w * MOVE)) reset();
+      if (!anchor) { anchor = result.quad; since = now; }
+      misses = 0;
+      const score = sharpness(result);
+      if (!best || score > best.score) {
+        const source = best ? best.source : document.createElement('canvas');
+        source.width = full.width;
+        source.height = full.height;
+        source.getContext('2d', { willReadFrequently: true }).drawImage(full, 0, 0);
+        best = { result, source, score };
+      }
+    } else if (anchor && !result.quad && misses < 1) {
+      misses++; // 偶爾一格沒抓到不重算
+    } else {
+      reset();
+    }
+    const progress = anchor ? Math.min(1, (now - since) / LOCK_MS) : null;
+    paint(result, result.quad || anchor, progress);
+    $('status').textContent = anchor ? '別動' : text || '對準了';
+    if (aligned && progress >= 1) return capture(best.result, best.source, true);
   }
   timer = setTimeout(tick, 70);
 }
 
-function show(result, locked) {
+// 拍下：轉綠、閃光、快門圖示收合，再顯示結果
+function capture(result, source, locked) {
   clearTimeout(timer);
+  capturing = true;
   const seconds = (performance.now() - startedAt) / 1000;
+  paint(result, result.quad, null, true);
+  $('status').textContent = '已拍好';
+  const r = result.region;
+  const [cx, cy] = result.quad
+    ? result.quad.map(p => toScreen(r, p)).reduce((sum, p) => [sum[0] + p[0] / 4, sum[1] + p[1] / 4], [0, 0])
+    : [r.box.left - r.view.left + r.box.width / 2, r.box.top - r.view.top + r.box.height / 2];
+  $('shutter').style.left = `${cx}px`;
+  $('shutter').style.top = `${cy}px`;
+  $('fx').hidden = false;
+  if (locked && navigator.vibrate) navigator.vibrate(60);
+  // 手動拍時 source 就是目前影格，先拉正再播動畫
+  render(result, source);
+  timer = setTimeout(() => show(result, locked, seconds), SHOT_MS);
+}
+
+function render(result, source) {
   const f = result.toFull;
   const quad = result.quad
     ? result.quad.map(p => ({ x: p.x * f, y: p.y * f }))
     : (({ x, y, w, h }) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map(([px, py]) => ({ x: px * f, y: py * f })))(result.box);
-  warp(full, quad, $('shot'));
+  warp(source, quad, $('shot'));
+}
+
+function show(result, locked, seconds) {
+  capturing = false;
+  $('fx').hidden = true;
+  reset();
   if (locked) {
     locks.push(seconds);
     $('stats').textContent = `已鎖定 ${locks.length} 次・平均 ${(locks.reduce((a, b) => a + b, 0) / locks.length).toFixed(1)} 秒`;
-    if (navigator.vibrate) navigator.vibrate(60);
   }
   $('result-title').textContent = locked ? '已鎖定，拉正結果' : result.quad ? '手動拍攝（已抓到四角）' : '手動拍攝（沒抓到四角，照取景框裁切）';
   const missing = SIDES.filter(s => !result.sides[s]).map(s => ({ top: '上', right: '右', bottom: '下', left: '左' })[s]);
   $('result-info').textContent = `耗時 ${seconds.toFixed(1)} 秒・單次偵測 ${Math.round(result.cost)} ms・影像 ${video.videoWidth}×${video.videoHeight}` + (result.quad ? '' : `・未抓到：${missing.join('') || '無（比例不符）'}`);
   $('result').hidden = false;
+  // 卡片從取景位置放大到結果位置
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const from = result.region.box, to = $('shot').getBoundingClientRect();
+  $('shot').animate([
+    { transform: `translate(${from.left + from.width / 2 - to.left - to.width / 2}px, ${from.top + from.height / 2 - to.top - to.height / 2}px) scale(${from.width / to.width})` },
+    { transform: 'none' }
+  ], { duration: 280, easing: 'ease-out' });
 }
 
 function resume() {
   $('result').hidden = true;
-  last = null;
-  startedAt = stableSince = performance.now();
+  $('fx').hidden = true;
+  capturing = false;
+  reset();
+  startedAt = performance.now();
+  readyAt = startedAt + COOLDOWN_MS;
   clearTimeout(timer);
   tick();
 }
@@ -338,7 +447,7 @@ function stop() {
 }
 
 $('next').onclick = resume;
-$('snap').onclick = () => { if (frame) show(analyze(), false); };
+$('snap').onclick = () => { if (frame && !capturing) capture(analyze(), full, false); };
 document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
 window.addEventListener('pagehide', stop);
 window.addEventListener('pageshow', start);
