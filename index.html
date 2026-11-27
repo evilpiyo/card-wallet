@@ -199,6 +199,7 @@
     @media (prefers-reduced-motion: reduce) { #scan-status, #scan-dot { transition: none !important; } }
     .scan-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #60a5fa; flex: none; }
     .latest { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; }
+    @media (max-width: 340px) { .latest { gap: 4px; } .latest .num { font-size: 13px; } }
     .shot-link { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 0; background: none; border: 0; color: inherit; cursor: pointer; }
     .shot-link .num { text-decoration: underline; text-underline-offset: 3px; }
     .shot-link .ic { width: 16px; height: 16px; opacity: .7; }
@@ -491,7 +492,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.27・abbffe9'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.28・1fd6bdb'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
