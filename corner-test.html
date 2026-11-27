@@ -21,7 +21,7 @@
     #fx { position: absolute; inset: 0; pointer-events: none; }
     #fx[hidden] { display: none; }
     #flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash .35s ease-out; }
-    #shutter { position: absolute; width: 130px; height: 130px; margin: -65px 0 0 -65px; opacity: 0; animation: shutter .5s ease-in-out; }
+    #shutter { position: absolute; width: 80px; height: 80px; margin: -40px 0 0 -40px; opacity: 0; animation: shutter .5s ease-in-out; }
     @keyframes flash { 25% { opacity: .75; } }
     @keyframes shutter { 0% { opacity: 0; transform: scale(1.35) rotate(0); } 35% { opacity: .7; } 70% { opacity: .7; transform: scale(.8) rotate(55deg); } 100% { opacity: 0; transform: scale(.8) rotate(55deg); } }
     @keyframes fade { 40% { opacity: .5; } }
@@ -68,6 +68,8 @@ const SMALL = 400;        // 偵測用影像寬
 const EDGE = 22;          // 相鄰像素差達此值視為邊緣
 const MIN_SCORE = 0.55;   // 一條邊至少要有這麼多取樣點是邊緣
 const LOCK_MS = 1000;     // 對準後要穩定多久才拍
+const FADE_MS = 200;      // 開始倒數後四角淡出的時間
+const BLUE = 'rgba(59,130,246,.32)', GREEN = 'rgba(74,222,128,.34)';
 const MOVE = 0.025;       // 倒數中角點偏離起點超過框寬的這個比例就重算
 const COOLDOWN_MS = 600;  // 按「下一張」後多久內不倒數
 const SHOT_MS = 500;      // 拍照動畫長度
@@ -268,51 +270,35 @@ function sharpness(result) {
   return sum / count;
 }
 
-// 四角標記：灰＝沒抓到、黃＝兩邊都看到但組不成卡片、綠＝已抓到、藍＝倒數中
-// 抓到卡片畫外框；倒數時整張蓋半透明藍，外框依進度填滿；拍下時轉綠
-function paint(result, quad, progress, shot) {
+// 同一時間只畫一種圖形：找卡片時是四個角（灰＝沒抓到、亮白＝抓到），
+// 倒數時四角淡出、只在實卡上蓋淡藍，拍下轉綠。corners 是四角的不透明度
+function paint(result, quad, corners, fill) {
   const canvas = $('overlay'), r = result.region, ratio = window.devicePixelRatio || 1;
   canvas.width = r.view.width * ratio;
   canvas.height = r.view.height * ratio;
   const ctx = canvas.getContext('2d');
   ctx.scale(ratio, ratio);
+  if (fill && quad) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    quad.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](...toScreen(r, p)));
+    ctx.closePath();
+    ctx.fill();
+  }
+  if (corners <= 0) return;
   const x = r.box.left - r.view.left, y = r.box.top - r.view.top, w = r.box.width, h = r.box.height, len = w * 0.1;
-  const corners = [[x, y, 1, 1, 'top', 'left'], [x + w, y, -1, 1, 'top', 'right'], [x + w, y + h, -1, -1, 'bottom', 'right'], [x, y + h, 1, -1, 'bottom', 'left']];
-  const tone = shot ? '#4ade80' : progress !== null ? '#60a5fa' : null;
+  ctx.globalAlpha = corners;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const [cx, cy, sx, sy, a, b] of corners) {
-    ctx.strokeStyle = tone || (quad ? '#4ade80' : result.sides[a] && result.sides[b] ? '#facc15' : 'rgba(255,255,255,.55)');
+  for (const [cx, cy, sx, sy, a, b] of [[x, y, 1, 1, 'top', 'left'], [x + w, y, -1, 1, 'top', 'right'], [x + w, y + h, -1, -1, 'bottom', 'right'], [x, y + h, 1, -1, 'bottom', 'left']]) {
+    ctx.strokeStyle = quad || (result.sides[a] && result.sides[b]) ? '#fff' : 'rgba(255,255,255,.4)';
     ctx.beginPath();
     ctx.moveTo(cx, cy + sy * len);
     ctx.lineTo(cx, cy);
     ctx.lineTo(cx + sx * len, cy);
     ctx.stroke();
   }
-  if (!quad) return;
-  const points = quad.map(p => toScreen(r, p));
-  const trace = () => {
-    ctx.beginPath();
-    points.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](...p));
-    ctx.closePath();
-  };
-  trace();
-  if (tone) {
-    ctx.fillStyle = shot ? 'rgba(74,222,128,.34)' : 'rgba(59,130,246,.32)';
-    ctx.fill();
-  }
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = tone || '#4ade80';
-  ctx.stroke();
-  if (progress === null || shot) return;
-  const lengths = points.map((p, i) => Math.hypot(points[(i + 1) % 4][0] - p[0], points[(i + 1) % 4][1] - p[1]));
-  const total = lengths.reduce((a, b) => a + b, 0);
-  trace();
-  ctx.setLineDash([total * progress, total]);
-  ctx.lineWidth = 7;
-  ctx.stroke();
-  ctx.setLineDash([]);
 }
 
 // 偵測座標換算成畫面座標
@@ -348,20 +334,20 @@ function tick() {
     } else {
       reset();
     }
-    const progress = anchor ? Math.min(1, (now - since) / LOCK_MS) : null;
-    paint(result, result.quad || anchor, progress);
+    const held = anchor ? now - since : 0;
+    paint(result, result.quad || anchor, anchor ? 1 - held / FADE_MS : 1, anchor ? BLUE : null);
     $('status').textContent = anchor ? '別動' : text || '對準了';
-    if (aligned && progress >= 1) return capture(best.result, best.source, true);
+    if (aligned && held >= LOCK_MS) return capture(best.result, best.source, true);
   }
   timer = setTimeout(tick, 70);
 }
 
-// 拍下：轉綠、閃光、快門圖示收合，再顯示結果
+// 拍下：卡片轉綠、閃光、快門圖示收合，再顯示結果
 function capture(result, source, locked) {
   clearTimeout(timer);
   capturing = true;
   const seconds = (performance.now() - startedAt) / 1000;
-  paint(result, result.quad, null, true);
+  paint(result, result.quad, 0, GREEN);
   $('status').textContent = '已拍好';
   const r = result.region;
   const [cx, cy] = result.quad
