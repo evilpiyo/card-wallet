@@ -136,7 +136,8 @@
     /* 底部面板與提示 */
     .shade { position: fixed; top: 0; left: 0; right: 0; height: 100%; height: 100dvh; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
     .sheet { width: 100%; max-width: 28rem; max-height: 92%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--bg); color: var(--text); }
-    .sheet-x { position: sticky; top: 0; z-index: 2; flex: none; align-self: flex-end; width: 40px; height: 40px; margin: -8px -6px -10px 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); font-size: 18px; cursor: pointer; }
+    .sheet-x { position: sticky; top: 0; z-index: 2; flex: none; align-self: flex-end; display: grid; place-items: center; width: 44px; height: 44px; margin: -8px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: var(--text); color: var(--surface); box-shadow: 0 2px 6px rgba(0,0,0,.25); cursor: pointer; }
+    .sheet-x svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; }
     .toast { position: fixed; left: 16px; right: 16px; bottom: 24px; z-index: 60; max-width: 26rem; margin: 0 auto; padding: 10px 14px; border-radius: 12px; background: #222; color: #fff; font-size: 14px; text-align: center; }
     .btn-fill-danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
     .face-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; justify-items: center; }
@@ -486,7 +487,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.27・fdc20ca'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.27・da5249c'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -1273,7 +1274,7 @@
     function openSheet(html, onDismiss = null) {
       sheetDismiss = onDismiss;
       // 右上角 ✕ 固定可見（底部按鈕可能被瀏覽器網址列擋住），作用同點背景
-      $('sheet').innerHTML = '<button type="button" class="sheet-x" aria-label="關閉">✕</button>' + html;
+      $('sheet').innerHTML = '<button type="button" class="sheet-x" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' + html;
       $('sheet').querySelector('.sheet-x').onclick = () => (sheetDismiss || closeSheet)();
       $('sheet').scrollTop = 0;
       $('shade').hidden = false;
@@ -1317,10 +1318,8 @@
       if (!card) return;
       if (isLocked(id)) return toast(LOCKED_HINT);
       openSheet(`<b>改面額</b><p class="muted">${escapeHTML(maskedNo(card.barcode))}・目前 $${escapeHTML(card.initialAmount)}。未使用的卡，餘額跟著改；用過的卡保留餘額（不超過新面額）。</p>
-        <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}" aria-pressed="${v === Number(card.initialAmount)}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>
-        <button type="button" class="btn" data-act="cancel">取消</button>`, () => viewPhoto(id));
+        <div class="face-grid">${FACE_VALUES.map(v => `<button type="button" data-value="${v}" aria-pressed="${v === Number(card.initialAmount)}">${miniCard(v, false)}<b>$${v}</b></button>`).join('')}</div>`, () => viewPhoto(id));
       $('sheet').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => changeFace(id, Number(btn.dataset.value)));
-      sheetButton('cancel', () => viewPhoto(id));
     }
 
     function changeFace(id, face) {
@@ -1359,7 +1358,6 @@
         <p class="text-center text-sm" role="alert" style="color:var(--danger)"></p>
         <div class="row">
           <button type="button" class="btn flex-1" data-act="zero">用完</button>
-          <button type="button" class="btn flex-1" data-act="close">取消</button>
           <button type="button" class="btn btn-primary flex-1" data-act="save">儲存</button>
         </div>`);
       const sheet = $('sheet');
@@ -1377,7 +1375,6 @@
         if (valid()) preview(Number(input.value));
       };
       sheetButton('zero', () => { input.value = 0; input.oninput(); });
-      sheetButton('close', closeSheet);
       sheetButton('save', () => {
         if (!valid()) return input.oninput();
         const value = Number(input.value);
@@ -1396,9 +1393,7 @@
       const cancel = () => { closeSheet(); renderCardList(); };
       openSheet(`<b>刪除這張卡？</b><div class="row">${miniCard(card.initialAmount)}<div><div class="num">${escapeHTML(maskedNo(card.barcode))}</div>餘額 ${escapeHTML(money(card.balance))}</div></div>
         <p class="muted">餘額紀錄會一起刪除，無法復原。</p>
-        <button type="button" class="btn" data-act="cancel">取消</button>
         <button type="button" class="btn btn-fill-danger" data-act="delete">刪除</button>`, cancel);
-      sheetButton('cancel', cancel);
       sheetButton('delete', () => {
         removeCard(id).then(() => { closeSheet(); toast('已刪除'); })
           .catch(() => toast('刪除失敗，請再試一次'));
@@ -2157,9 +2152,7 @@
       openSheet(`<b>放棄本次掃描？</b>
         <p>本次新增的 <b>${session.length} 張・${money(total)}</b> 會刪除。</p>
         <p class="muted">辨識已暫停。原本就有的卡不受影響。</p>
-        <button type="button" class="btn" data-act="cancel">取消</button>
         <button type="button" class="btn btn-fill-danger" data-act="drop">放棄並刪除</button>`);
-      sheetButton('cancel', closeSheet);
       sheetButton('drop', () => {
         const ids = session.map(c => c.id);
         // 同一個 transaction：全部刪除或全部保留
@@ -2217,9 +2210,7 @@
       const cancel = onCancel || (() => fromFace ? viewScanGroup(fromFace) : closeSheet());
       openSheet(`<b>${redo ? '刪除並重掃這張卡？' : '刪除這張卡？'}</b><div class="row">${miniCard(entry.face)}<div><div class="num">${escapeHTML(fullNo(entry.barcode))}</div>面額 $${entry.face}</div></div>
         <p class="muted">辨識已暫停。${redo ? '刪除後請重新對準，馬上重掃。' : '要重掃請先拿開卡片。'}</p>
-        <button type="button" class="btn" data-act="cancel">取消</button>
         <button type="button" class="btn btn-fill-danger" data-act="delete">${redo ? '刪除重掃' : '刪除'}</button>`, cancel);
-      sheetButton('cancel', cancel);
       sheetButton('delete', () => {
         removeCard(id).then(() => {
           session = session.filter(c => c.id !== id);
@@ -3034,11 +3025,9 @@
             ${overCount ? `<p class="muted">備份中有 ${overCount} 張需要核對餘額。</p>` : ''}
             ${count('diff') ? '<p class="muted">內容不同的卡預設保留手機裡現有的。</p>' : ''}
             <button type="button" class="btn btn-primary" data-act="keep">${count('diff') ? '匯入（保留現有）' : '匯入'}</button>
-            ${count('diff') ? `<button type="button" class="btn btn-fill-danger" data-act="over">用備份覆蓋 ${count('diff')} 張</button>` : ''}
-            <button type="button" class="btn" data-act="cancel">取消</button>`);
+            ${count('diff') ? `<button type="button" class="btn btn-fill-danger" data-act="over">用備份覆蓋 ${count('diff')} 張</button>` : ''}`);
           sheetButton('keep', () => runImport(cards, false));
           if (count('diff')) sheetButton('over', () => runImport(cards, true));
-          sheetButton('cancel', closeSheet);
         } catch (err) {
           alert(`匯入失敗：${err.message}。沒有寫入任何資料。`);
         }
