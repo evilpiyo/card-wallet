@@ -162,23 +162,31 @@
     #view-scanner { background: #111418; color: #fff; }
     .scan-top { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
     .dark { background: #1f2937; color: #fff; border: 1px solid #374151; border-radius: 10px; padding: 7px 12px; font-size: 14px; }
-    .cam { position: relative; flex: none; display: flex; justify-content: center; padding: 8px 16px; overflow: hidden; background: #000; }
+    .cam { position: relative; flex: none; display: flex; justify-content: center; overflow: hidden; background: #000; }
     #reader { position: absolute; inset: 0; }
     #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
-    /* 取景框固定不動，兩條導引線對應卡背上兩段條碼的高度，整張卡對準一次即可 */
-    #guide-box { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1.586 / 1; border: 1px solid rgba(255,255,255,.55); border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,.6); pointer-events: none; transition: border-color .2s; }
-    #guide-box.saved { border: 2px solid #4ade80; }
-    .guide-title { position: absolute; left: 3%; top: 3%; width: 40%; height: 15%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.8); }
-    .guide-bars { position: absolute; left: 5%; right: 40%; height: 13%; opacity: .22; background: repeating-linear-gradient(90deg, #fff 0 2px, transparent 2px 4px, #fff 4px 5px, transparent 5px 9px); }
-    .guide-qr { position: absolute; right: 4%; top: 57%; width: 12%; aspect-ratio: 1; border: 1px dashed rgba(255,255,255,.5); border-radius: 4px; color: rgba(255,255,255,.7); font-size: 10px; display: grid; place-items: center; }
-    /* 三個讀取區：藍＝等待、綠＝已讀到、黃＝需注意 */
-    .z { --c: 96,165,250; box-shadow: 0 0 6px rgba(var(--c),.35), 0 0 14px 1px rgba(var(--c),.2); animation: breathe 2.4s ease-in-out infinite; }
-    .z.ok { --c: 74,222,128; animation: none; }
-    .z.warn { --c: 251,191,36; animation: none; }
-    .g-face { position: absolute; left: 3%; top: 3%; width: 40%; height: 15%; border: 1px solid rgba(var(--c),.9); border-radius: 8px; }
-    .g-line { position: absolute; left: 3%; right: 34%; height: 2px; border-radius: 2px; background: rgba(var(--c),.9); }
-    .z b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); white-space: nowrap; border-radius: 99px; padding: 1px 7px; font-size: 11px; background: rgb(var(--c)); color: #111; }
-    @keyframes breathe { 50% { box-shadow: 0 0 3px rgba(var(--c),.12), 0 0 8px rgba(var(--c),.06); } }
+    /* 取景框固定不動、不畫框線：條碼與面額依它的位置讀取，四角畫在 #lock-overlay。
+       左右留白讓卡片的邊落在畫面內，才找得到四邊 */
+    .cam { padding: 18px 10% 38px; }
+    #guide-box { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1.586 / 1; pointer-events: none; }
+    #lock-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #lock-hint { position: absolute; left: -12%; right: -12%; top: calc(100% + 8px); text-align: center; font-size: 17px; font-weight: 700; line-height: 22px; text-shadow: 0 1px 4px #000; }
+    #lock-fx { position: absolute; inset: 0; pointer-events: none; }
+    #lock-fx[hidden] { display: none; }
+    #lock-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: shot-flash .35s ease-out; }
+    #lock-shutter { position: absolute; width: 80px; height: 80px; margin: -40px 0 0 -40px; opacity: 0; animation: shot-shutter .5s ease-in-out; }
+    @keyframes shot-flash { 25% { opacity: .75; } }
+    @keyframes shot-shutter { 0% { opacity: 0; transform: scale(1.35) rotate(0); } 35% { opacity: .7; } 70% { opacity: .7; transform: scale(.8) rotate(55deg); } 100% { opacity: 0; transform: scale(.8) rotate(55deg); } }
+    @keyframes shot-fade { 40% { opacity: .5; } }
+    @media (prefers-reduced-motion: reduce) { #lock-flash, #lock-shutter { animation-name: shot-fade; } }
+    /* 三個讀取燈號：藍＝等待、綠＝已讀到、黃＝需注意 */
+    .zones { display: flex; flex: none; justify-content: center; gap: 10px; padding: 8px 16px 0; }
+    .z { --c: 96,165,250; min-width: 54px; text-align: center; border: 1px solid rgba(var(--c),.9); border-radius: 99px; padding: 1px 10px; font-size: 12px; color: rgb(var(--c)); animation: breathe 2.4s ease-in-out infinite; }
+    .z.ok, .z.warn { background: rgb(var(--c)); color: #111; animation: none; }
+    .z.ok { --c: 74,222,128; }
+    .z.warn { --c: 251,191,36; }
+    .z b { font-weight: 700; }
+    @keyframes breathe { 50% { opacity: .55; } }
     @media (prefers-reduced-motion: reduce) { .z { animation: none; } }
     .scan-drop { color: #fca5a5; }
     .scan-drop.off { visibility: hidden; }
@@ -384,8 +392,6 @@
       <div class="group">
         <button type="button" onclick="showPage('view-text')"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3"/></svg>首頁文字</button>
         <button type="button" id="install-row" onclick="showInstallGuide()"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 8v7M8.5 11.5h7"/></svg>加入主畫面</button>
-        <!-- 暫時：四角鎖定測試入口，定案後移除 -->
-        <button type="button" id="corner-test-row" onclick="location.href='corner-test.html'"><svg class="ic" viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3"/></svg>四角鎖定測試</button>
       </div>
       <div class="group">
         <button type="button" onclick="exportData()"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="flex-1">備份<br><span class="muted" id="settings-backup"></span></span><span class="badge" id="settings-due" hidden>該備份了</span></button>
@@ -443,15 +449,21 @@
 
     <div class="cam">
       <div id="reader"></div>
-      <div id="guide-box">
-        <div class="guide-title">商品卡 N 元</div>
-        <div class="guide-bars" style="top:53.5%"></div>
-        <div class="guide-bars" style="top:78.5%"></div>
-        <div class="guide-qr">QR</div>
-        <span class="g-face z" id="zone-face"><b></b></span>
-        <span class="g-line z" id="zone-1" style="top:60%"><b></b></span>
-        <span class="g-line z" id="zone-2" style="top:85%"><b></b></span>
+      <canvas id="lock-overlay"></canvas>
+      <div id="guide-box"><div id="lock-hint"></div></div>
+      <div id="lock-fx" hidden>
+        <div id="lock-flash"></div>
+        <svg id="lock-shutter" viewBox="-50 -50 100 100" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" aria-hidden="true">
+          <circle r="44" fill="rgba(0,0,0,.35)"/>
+          <path d="M0-44 21-8M38-22 19 14M38 22H-3M0 44-21 8M-38 22-19-14M-38-22H3"/>
+        </svg>
       </div>
+    </div>
+
+    <div class="zones" aria-hidden="true">
+      <span class="z" id="zone-face"><b></b></span>
+      <span class="z" id="zone-1"><b></b></span>
+      <span class="z" id="zone-2"><b></b></span>
     </div>
 
     <div class="scanbar">
@@ -474,7 +486,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.27・e785d6f'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.27・fdc20ca'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -611,6 +623,169 @@
         document.querySelectorAll('[data-text]').forEach(input => input.value = textOf(input.dataset.text));
       }
     }
+
+    // ===== 卡片四邊偵測與拉正 =====
+    const CardEdge = (() => {
+      const RATIO = 1.586;
+      const EDGE = 22;          // 相鄰像素差達此值視為邊緣
+      const MIN_SCORE = 0.55;   // 一條邊至少要有這麼多取樣點是邊緣
+      const SIDES = ['top', 'right', 'bottom', 'left'];
+
+      // 回傳 gx（左右方向的變化，用來找直邊）與 gy（上下方向，找橫邊）
+      function edgeMaps({ data, width, height }) {
+        const gx = new Uint8Array(width * height), gy = new Uint8Array(width * height);
+        const diff = (a, b) => data[a + 3] && data[b + 3] // 超出影像的透明區不算邊
+          ? Math.max(Math.abs(data[a] - data[b]), Math.abs(data[a + 1] - data[b + 1]), Math.abs(data[a + 2] - data[b + 2])) : 0;
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const i = y * width + x, p = i * 4;
+            gx[i] = diff(p - 4, p + 4) >= EDGE ? 1 : 0;
+            gy[i] = diff(p - width * 4, p + width * 4) >= EDGE ? 1 : 0;
+          }
+        }
+        return { gx, gy };
+      }
+
+      // 找一側的候選直線。橫邊：y = c + k(x - mid)；直邊：x = c + k(y - mid)
+      function findLines(map, width, height, box, side) {
+        const flat = side === 'top' || side === 'bottom';
+        const from = flat ? box.x + box.w * 0.1 : box.y + box.h * 0.12;
+        const to = flat ? box.x + box.w * 0.9 : box.y + box.h * 0.88;
+        const mid = flat ? box.x + box.w / 2 : box.y + box.h / 2;
+        const expected = { top: box.y, bottom: box.y + box.h, left: box.x, right: box.x + box.w }[side];
+        const tol = flat ? box.h * 0.17 : box.w * 0.12;
+        const found = [];
+        for (let degree = -8; degree <= 8; degree++) {
+          const k = Math.tan(degree * Math.PI / 180);
+          for (let c = Math.round(expected - tol); c <= expected + tol; c++) {
+            let hits = 0, total = 0;
+            for (let t = from; t <= to; t += 2) {
+              const along = Math.round(t), across = Math.round(c + k * (t - mid));
+              total++;
+              for (let d = -1; d <= 1; d++) {
+                const x = flat ? along : across + d, y = flat ? across + d : along;
+                if (x >= 0 && y >= 0 && x < width && y < height && map[y * width + x]) { hits++; break; }
+              }
+            }
+            if (hits / total >= MIN_SCORE) found.push({ c, k, mid, flat, score: hits / total });
+          }
+        }
+        // 分數相同時取靠中間者；相近的線只留一條
+        found.sort((a, b) => b.score - a.score || Math.abs(a.k) - Math.abs(b.k));
+        const kept = [];
+        for (const line of found) {
+          if (kept.every(other => Math.abs(other.c - line.c) > 6)) kept.push(line);
+          if (kept.length === 5) break;
+        }
+        return kept;
+      }
+
+      function cross(flat, upright) {
+        // y = c1 + k1(x - m1)、x = c2 + k2(y - m2)
+        const a = flat.c - flat.k * flat.mid, b = upright.c - upright.k * upright.mid;
+        const y = (a + flat.k * b) / (1 - flat.k * upright.k);
+        return { x: b + upright.k * y, y };
+      }
+
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+      function measure([tl, tr, br, bl]) {
+        const top = dist(tl, tr), bottom = dist(bl, br), left = dist(tl, bl), right = dist(tr, br);
+        return {
+          w: (top + bottom) / 2, h: (left + right) / 2,
+          skew: Math.max(top / bottom, bottom / top, left / right, right / left),
+          tilt: Math.atan2(tr.y - tl.y + br.y - bl.y, tr.x - tl.x + br.x - bl.x) * 180 / Math.PI,
+          cx: (tl.x + tr.x + br.x + bl.x) / 4, cy: (tl.y + tr.y + br.y + bl.y) / 4
+        };
+      }
+
+      // image：含取景框外圍的影像；box：取景框在影像中的位置
+      function detect(image, box) {
+        const { gx, gy } = edgeMaps(image);
+        const lines = {};
+        for (const side of SIDES) {
+          lines[side] = findLines(side === 'top' || side === 'bottom' ? gy : gx, image.width, image.height, box, side);
+        }
+        let best = null;
+        for (const t of lines.top) for (const r of lines.right) for (const b of lines.bottom) for (const l of lines.left) {
+          const quad = [cross(t, l), cross(t, r), cross(b, r), cross(b, l)];
+          const m = measure(quad);
+          if (Math.abs(m.w / m.h / RATIO - 1) > 0.1 || m.skew > 1.12 || m.w < box.w * 0.75) continue;
+          if (quad.some(p => p.x < 0 || p.y < 0 || p.x > image.width || p.y > image.height)) continue;
+          // 分數相近時偏好較外圈的組合，避免抓到卡面上的印刷線條
+          const score = t.score + r.score + b.score + l.score + 0.8 * (m.w * m.h) / (box.w * box.h) - 2 * Math.abs(m.w / m.h / RATIO - 1);
+          if (!best || score > best.score) best = { quad, score };
+        }
+        return { sides: Object.fromEntries(SIDES.map(s => [s, lines[s].length > 0])), quad: best && best.quad };
+      }
+
+      // 把來源的四邊形貼到 out（透視校正，雙線性取樣）
+      function warp(source, quad, out) {
+        const src = source.getContext('2d').getImageData(0, 0, source.width, source.height);
+        const ctx = out.getContext('2d'), dst = ctx.createImageData(out.width, out.height);
+        const [p0, p1, p2, p3] = quad;
+        const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
+        const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
+        const den = dx1 * dy2 - dx2 * dy1;
+        const g = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
+        const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + h * p3.x;
+        const d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + h * p3.y;
+        for (let j = 0; j < out.height; j++) {
+          const v = (j + 0.5) / out.height;
+          for (let i = 0; i < out.width; i++) {
+            const u = (i + 0.5) / out.width, z = g * u + h * v + 1;
+            const x = Math.min(Math.max((a * u + b * v + p0.x) / z, 0), source.width - 1.001);
+            const y = Math.min(Math.max((d * u + e * v + p0.y) / z, 0), source.height - 1.001);
+            const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0;
+            const p = (y0 * source.width + x0) * 4, q = p + source.width * 4, o = (j * out.width + i) * 4;
+            for (let n = 0; n < 3; n++) {
+              dst.data[o + n] = (src.data[p + n] * (1 - fx) + src.data[p + 4 + n] * fx) * (1 - fy)
+                + (src.data[q + n] * (1 - fx) + src.data[q + 4 + n] * fx) * fy;
+            }
+            dst.data[o + 3] = 255;
+          }
+        }
+        ctx.putImageData(dst, 0, 0);
+      }
+
+      // 需要調整的提示；空字串代表對準了。拉正可修掉小幅歪斜與遠近，門檻從寬
+      function advice(result) {
+        const { quad, sides, box } = result;
+        if (!quad) {
+          const missing = SIDES.filter(s => !sides[s]).map(s => ({ top: '上', right: '右', bottom: '下', left: '左' })[s]);
+          if (missing.length >= 3) return '把整張卡放進框內';
+          if (missing.length) return `還沒抓到${missing.join('、')}邊`;
+          return '放平、對齊框線';
+        }
+        const m = measure(quad);
+        if (m.w < box.w * 0.84) return '靠近一點';
+        if (m.w > box.w * 1.14) return '拿遠一點';
+        if (m.cx - (box.x + box.w / 2) > box.w * 0.09) return '卡片往左一點';
+        if (box.x + box.w / 2 - m.cx > box.w * 0.09) return '卡片往右一點';
+        if (m.cy - (box.y + box.h / 2) > box.h * 0.11) return '卡片往上一點';
+        if (box.y + box.h / 2 - m.cy > box.h * 0.11) return '卡片往下一點';
+        if (Math.abs(m.tilt) > 7) return '轉正一點';
+        if (m.skew > 1.09) return '手機放平一點';
+        return '';
+      }
+
+      // 清晰度：卡片中央相鄰像素差的平方平均，越大越清楚
+      function sharpness(full, result) {
+        const f = result.toFull, m = measure(result.quad);
+        const w = Math.round(m.w * f * 0.7), h = Math.round(m.h * f * 0.7);
+        const { data } = full.getContext('2d').getImageData(Math.round(m.cx * f - w / 2), Math.round(m.cy * f - h / 2), w, h);
+        let sum = 0, count = 0;
+        for (let y = 0; y < h; y += 4) {
+          for (let x = 1; x < w; x++, count++) {
+            const i = (y * w + x) * 4 + 1, d = data[i] - data[i - 4];
+            sum += d * d;
+          }
+        }
+        return sum / count;
+      }
+
+      return { detect, warp, advice, measure, sharpness, dist };
+    })();
 
     // ===== 兩段條碼 =====
     const SEGMENT_PATTERNS = { 1: /^\d{16}$/, 2: /^[0-9A-Z]{8}$/ };
@@ -1395,7 +1570,7 @@
 
     function emptyPending() {
       // confirm：兩段都讀到後，要再讀到一次的那一段（確認同一張卡）
-      return { 1: null, 2: null, image: null, confirm: 0 };
+      return { 1: null, 2: null, image: null, fallback: null, confirm: 0 };
     }
 
     // buzz：需要使用者處理的警示才震動；result：事情已結束的訊息，停一段時間後淡出
@@ -1452,6 +1627,7 @@
       pending = emptyPending();
       faceVotes = new Map();
       savingScan = false;
+      lock = emptyLock();
       streaks = { 1: { value: '', count: 0 }, 2: { value: '', count: 0 } };
       updateScanUI();
     }
@@ -1461,6 +1637,7 @@
       justSaved = [];
       holdLeft = 0;
       ignoreLeft = 0;
+      reads = [];
       clearInterval(scanTicker);
       scanTicker = setInterval(tickScan, TICK_MS);
       $('view-scanner').classList.remove('hidden');
@@ -1483,9 +1660,10 @@
         video.playsInline = true;
         video.srcObject = stream;
         $('reader').replaceChildren(video);
-        camera = { stream, video, timer: 0 };
+        camera = { stream, video, timer: 0, lockTimer: 0, fxTimer: 0 };
         await video.play();
         decodeLoop(request);
+        lockLoop(request);
       } catch (err) {
         if (request === cameraRequest) alert("無法啟動相機，請確認網址為 HTTPS 並允許相機權限：\n" + err);
       }
@@ -1495,6 +1673,9 @@
       cameraRequest++;
       if (!camera) return;
       clearTimeout(camera.timer);
+      clearTimeout(camera.lockTimer);
+      clearTimeout(camera.fxTimer);
+      clearLockView();
       camera.stream.getTracks().forEach(t => t.stop());
       camera = null;
       $('reader').replaceChildren();
@@ -1621,13 +1802,14 @@
       camera.timer = setTimeout(() => decodeLoop(request), 80);
     }
 
-    // 依畫面上的取景框裁切（video 以 object-fit: cover 顯示，需換算回影像座標）
+    // 備援照片：取景框外放寬一成，讀到條碼的當下擷取（一定是同一張卡）
     function captureCroppedCardImage() {
       try {
         const video = document.querySelector('#reader video');
         if (!video || video.videoWidth === 0) return null;
 
-        const { x, y, w, h } = toVideoRect(video, $('guide-box'));
+        const box = toVideoRect(video, $('guide-box'));
+        const [x, y, w, h] = [box.x - box.w * 0.1, box.y - box.h * 0.1, box.w * 1.2, box.h * 1.2];
 
         const canvas = document.createElement('canvas');
         canvas.width = 640;
@@ -1643,7 +1825,200 @@
       }
     }
 
+    // ===== 四角鎖定：拍完整卡面 =====
+    const LOCK_MS = 1000;        // 對準後穩定多久才拍
+    const MOVE = 0.025;          // 倒數中角點偏離起點超過框寬的這個比例就重算
+    const CORNER_FADE_MS = 200;  // 倒數開始後四角淡出
+    const EDGE_MARGIN = 0.15;    // 取景框外搜尋範圍（相對框寬）
+    const SMALL = 400;           // 偵測用影像寬
+    const SHOT_MS = 500;         // 拍照動畫
+    const PHOTO_WAIT_MS = 1500;  // 條碼與面額都好了之後，最多再等多久
+    const FRESH_MS = 1500;       // 這段時間內讀到新卡條碼才倒數
+    const READ_SLACK_MS = 400;
+    const BLUE = 'rgba(59,130,246,.32)', GREEN = 'rgba(74,222,128,.34)';
+    let lock = emptyLock();
+    let reads = [];              // 最近讀到的條碼 { value, at }
+    const grabCanvas = document.createElement('canvas');
+    const smallCanvas = document.createElement('canvas');
+
+    function emptyLock() {
+      // photo：{ image, from, to, ok }；ok 代表倒數期間讀到的條碼和目前這張卡相符
+      return { anchor: null, since: 0, misses: 0, best: null, photo: null };
+    }
+
+    function stopCountdown() {
+      lock.anchor = lock.best = null;
+      lock.misses = 0;
+    }
+
+    function noteRead(value) {
+      if (!segmentOf(value)) return;
+      const at = performance.now();
+      reads = reads.filter(r => at - r.at < 8000);
+      reads.push({ value, at });
+    }
+
+    // 鏡頭前有還沒建檔的卡（已存在或剛存的卡不再拍）
+    function newCardInView(now) {
+      return reads.some(r => now - r.at < FRESH_MS && !justSaved.includes(r.value) && !allCards.some(c => c.barcode === r.value || c.barcode2 === r.value));
+    }
+
+    // 防混卡：拍照前後要讀到這張卡的條碼，且倒數期間起沒有讀到別張的
+    // （倒數前剛換掉的上一張不算：倒數時四角不能移動）
+    function photoMatches(photo, codes) {
+      const near = reads.filter(r => r.at >= photo.from - READ_SLACK_MS && r.at <= photo.to + READ_SLACK_MS);
+      return near.some(r => codes[segmentOf(r.value)] === r.value)
+        && !near.some(r => r.at >= photo.from && codes[segmentOf(r.value)] && codes[segmentOf(r.value)] !== r.value);
+    }
+
+    // 取景框（含外圍搜尋範圍）換算成影像座標，擷取一格並偵測
+    function grabCard(video) {
+      const box = toVideoRect(video, $('guide-box'));
+      const margin = box.w * EDGE_MARGIN;
+      const r = { x: box.x - margin, y: box.y - margin, w: box.w + 2 * margin, h: box.h + 2 * margin };
+      const fit = Math.min(1, 1600 / r.w);
+      grabCanvas.width = Math.round(r.w * fit);
+      grabCanvas.height = Math.round(r.h * fit);
+      grabCanvas.getContext('2d', { willReadFrequently: true }).drawImage(video, r.x, r.y, r.w, r.h, 0, 0, grabCanvas.width, grabCanvas.height);
+      smallCanvas.width = SMALL;
+      smallCanvas.height = Math.round(SMALL * r.h / r.w);
+      const ctx = smallCanvas.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, smallCanvas.width, smallCanvas.height);
+      ctx.drawImage(grabCanvas, 0, 0, smallCanvas.width, smallCanvas.height);
+      const k = SMALL / r.w;
+      const small = { x: margin * k, y: margin * k, w: box.w * k, h: box.h * k };
+      const found = CardEdge.detect(ctx.getImageData(0, 0, smallCanvas.width, smallCanvas.height), small);
+      return { ...found, box: small, region: r, toFull: grabCanvas.width / SMALL };
+    }
+
+    // 偵測座標換算成畫面（.cam）座標
+    function toScreen(video, region, p) {
+      const view = video.getBoundingClientRect();
+      const scale = Math.max(view.width / video.videoWidth, view.height / video.videoHeight);
+      return [(region.x + p.x / SMALL * region.w) * scale + (view.width - video.videoWidth * scale) / 2,
+        (region.y + p.y / SMALL * region.w) * scale + (view.height - video.videoHeight * scale) / 2];
+    }
+
+    // 同一時間只畫一種圖形：四個角（抓到亮白），或實卡上的色塊
+    function paintLock(video, frame, quad, corners, fill) {
+      const canvas = $('lock-overlay'), view = video.getBoundingClientRect(), ratio = window.devicePixelRatio || 1;
+      canvas.width = view.width * ratio;
+      canvas.height = view.height * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(ratio, ratio);
+      if (fill && quad) {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        quad.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](...toScreen(video, frame.region, p)));
+        ctx.closePath();
+        ctx.fill();
+      }
+      if (corners <= 0) return;
+      const box = $('guide-box').getBoundingClientRect();
+      const x = box.left - view.left, y = box.top - view.top, w = box.width, h = box.height, len = w * 0.1;
+      ctx.globalAlpha = corners;
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const [cx, cy, sx, sy, a, b] of [[x, y, 1, 1, 'top', 'left'], [x + w, y, -1, 1, 'top', 'right'], [x + w, y + h, -1, -1, 'bottom', 'right'], [x, y + h, 1, -1, 'bottom', 'left']]) {
+        ctx.strokeStyle = quad || (frame.sides[a] && frame.sides[b]) ? '#fff' : 'rgba(255,255,255,.45)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + sy * len);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx + sx * len, cy);
+        ctx.stroke();
+      }
+    }
+
+    function lockStep(video) {
+      const now = performance.now();
+      const held = lock.photo;
+      if (held && !held.ok) {
+        const known = pending[1] || pending[2];
+        if (known && photoMatches(held, pending)) held.ok = true;
+        else if (now - held.to > (known ? READ_SLACK_MS : FRESH_MS)) lock.photo = null; // 對不上，重拍
+      }
+      const frame = grabCard(video);
+      const text = frame.quad && !lock.photo ? CardEdge.advice(frame) : '';
+      const aligned = !text && frame.quad && !lock.photo && newCardInView(now);
+      if (aligned) {
+        if (lock.anchor && frame.quad.some((p, i) => CardEdge.dist(p, lock.anchor[i]) > frame.box.w * MOVE)) stopCountdown();
+        if (!lock.anchor) { lock.anchor = frame.quad; lock.since = now; }
+        lock.misses = 0;
+        const score = CardEdge.sharpness(grabCanvas, frame);
+        if (!lock.best || score > lock.best.score) {
+          const source = lock.best ? lock.best.source : document.createElement('canvas');
+          source.width = grabCanvas.width;
+          source.height = grabCanvas.height;
+          source.getContext('2d', { willReadFrequently: true }).drawImage(grabCanvas, 0, 0);
+          lock.best = { frame, source, score };
+        }
+      } else if (lock.anchor && !frame.quad && lock.misses < 1) {
+        lock.misses++; // 偶爾一格沒抓到不重算
+      } else {
+        stopCountdown();
+      }
+      const waited = lock.anchor ? now - lock.since : 0;
+      paintLock(video, frame, frame.quad || lock.anchor, lock.anchor ? 1 - waited / CORNER_FADE_MS : 1, lock.anchor ? BLUE : null);
+      $('lock-hint').textContent = lock.anchor ? '別動' : text;
+      if (aligned && waited >= LOCK_MS) takePhoto(video, now);
+    }
+
+    function takePhoto(video, now) {
+      const { frame, source } = lock.best;
+      const out = document.createElement('canvas');
+      out.width = 640;
+      out.height = Math.round(640 / 1.586);
+      CardEdge.warp(source, frame.quad.map(p => ({ x: p.x * frame.toFull, y: p.y * frame.toFull })), out);
+      lock.photo = { image: out.toDataURL('image/jpeg', 0.8), from: lock.since, to: now, ok: false };
+      if ((pending[1] || pending[2]) && photoMatches(lock.photo, pending)) lock.photo.ok = true;
+      stopCountdown();
+
+      paintLock(video, frame, frame.quad, 0, GREEN);
+      $('lock-hint').textContent = '已拍好';
+      const centre = frame.quad.map(p => toScreen(video, frame.region, p)).reduce((sum, p) => [sum[0] + p[0] / 4, sum[1] + p[1] / 4], [0, 0]);
+      $('lock-shutter').style.left = `${centre[0]}px`;
+      $('lock-shutter').style.top = `${centre[1]}px`;
+      $('lock-fx').hidden = false;
+      if (navigator.vibrate) navigator.vibrate(60);
+      clearTimeout(camera.fxTimer);
+      camera.fxTimer = setTimeout(() => $('lock-fx').hidden = true, SHOT_MS);
+    }
+
+    function lockLoop(request) {
+      if (request !== cameraRequest || !camera) return;
+      // 面板開著時暫停且倒數重算；拍照動畫期間保留畫面
+      if (!$('shade').hidden) stopCountdown();
+      else if (camera.video.videoWidth && $('lock-fx').hidden) lockStep(camera.video);
+      camera.lockTimer = setTimeout(() => lockLoop(request), 80);
+    }
+
+    function clearLockView() {
+      const canvas = $('lock-overlay');
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      $('lock-hint').textContent = '';
+      $('lock-fx').hidden = true;
+    }
+
+    // 決定要存的照片：鎖定的照片優先，等不到就用讀到條碼時的放寬裁切。中途換卡或取消回傳 false
+    async function awaitPhoto(current) {
+      const use = image => { current.image = image; return true; };
+      if (lock.photo?.ok) return use(lock.photo.image);
+      setScanStatus('拿穩，拍卡面中', 'ok');
+      const started = performance.now();
+      for (;;) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (pending !== current || $('view-scanner').classList.contains('hidden')) return false;
+        if (lock.photo?.ok) return use(lock.photo.image);
+        const waited = performance.now() - started;
+        if (waited >= PHOTO_WAIT_MS && !(lock.anchor && waited < PHOTO_WAIT_MS + LOCK_MS)) break; // 倒數中就讓它拍完
+      }
+      current.loose = true;
+      return use(current.fallback);
+    }
+
     function onScanSuccess(decodedText) {
+      noteRead(decodedText); // 面額判定中也要記，供照片比對
       if (savingScan || !$('shade').hidden || ignoreLeft > 0) return;
       if (justSaved.includes(decodedText)) {
         if (holdLeft > 0) holdLeft = holdMs; // 卡片還在鏡頭前，不重建
@@ -1686,7 +2061,7 @@
 
       if (!pending[1] && !pending[2]) faceVotes = new Map(); // 丟掉上一張卡的殘留判讀
       pending[segment] = value;
-      if (segment === 1) pending.image = captureCroppedCardImage();
+      pending.fallback = captureCroppedCardImage();
       sampleFaceValue();
       if (navigator.vibrate) navigator.vibrate(60);
 
@@ -1712,7 +2087,7 @@
       }
 
       const detected = confirmedFaceValue();
-      if (detected) return savePending(detected);
+      if (detected) return await awaitPhoto(current) && savePending(detected);
 
       setZone('face', 'warn');
       setScanStatus('讀不到面額，請點選', 'warn', true);
@@ -1726,7 +2101,8 @@
         <button type="button" class="btn" data-act="retry">重掃這張</button>`, cancel);
       $('sheet').querySelectorAll('[data-value]').forEach(btn => btn.onclick = () => {
         closeSheet();
-        if (pending === current) savePending(Number(btn.dataset.value));
+        if (pending !== current) return;
+        awaitPhoto(current).then(ok => ok && savePending(Number(btn.dataset.value)));
       });
       sheetButton('retry', cancel);
     }
@@ -1743,9 +2119,7 @@
         holdLeft = holdMs = SAVED_HOLD_MS; // 拿開後再掃，提示「已存在」
         resetPending();
         setZone('face', 'ok'); setZone(1, 'ok'); setZone(2, 'ok');
-        $('guide-box').classList.add('saved');
-        setTimeout(() => $('guide-box').classList.remove('saved'), 600);
-        setScanStatus('已新增，換下一張', 'ok', false, true);
+        setScanStatus(current.loose ? '已新增，卡面可能不完整' : '已新增，換下一張', current.loose ? 'warn' : 'ok', false, true);
         renderSession(face);
       }).catch(() => {
         resetPending();
