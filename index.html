@@ -159,7 +159,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.28・82f44d9'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.28・695cddf'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -298,6 +298,7 @@
       document.querySelectorAll('.sub-page').forEach(page => page.hidden = page.id !== id);
       $('view-home').hidden = Boolean(id);
       closeSheet();
+      if (!id) findUpdate();
       if (id === 'view-text') {
         document.querySelectorAll('[data-text]').forEach(input => input.value = textOf(input.dataset.text));
       }
@@ -2387,17 +2388,27 @@
     // ===== 離線與更新 =====
     let updating = false;
 
+    let swRegistration = null;
+
+    // 看有沒有已下載、等待中的新版。事件可能漏接，所以回前景、回首頁時也要查
+    function findUpdate() {
+      const next = swRegistration?.waiting;
+      // 沒有 controller 代表第一次安裝，不算更新
+      if (!next || next === waitingWorker || !navigator.serviceWorker.controller) return;
+      waitingWorker = next;
+      if (db) renderHome();
+    }
+
     function watchWorker(registration) {
-      const check = () => {
-        // 沒有 controller 代表第一次安裝，不算更新
-        if (!registration.waiting || !navigator.serviceWorker.controller) return;
-        waitingWorker = registration.waiting;
-        if (db) renderHome();
-      };
-      check();
-      registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', check));
+      swRegistration = registration;
+      const track = () => registration.installing?.addEventListener('statechange', findUpdate);
+      findUpdate();
+      track(); // 開啟時可能已在下載中，updatefound 不會再觸發
+      registration.addEventListener('updatefound', track);
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) registration.update().catch(() => {});
+        if (document.hidden) return;
+        findUpdate();
+        registration.update().then(findUpdate).catch(() => {});
       });
     }
 
