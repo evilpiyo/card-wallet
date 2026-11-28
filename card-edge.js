@@ -1,3 +1,4 @@
+// © 2026 sanfer.chiu. All rights reserved. 授權條款見 LICENSE。
 // ===== 卡片四邊偵測與拉正 =====
 const CardEdge = (() => {
   const RATIO = 1.586;

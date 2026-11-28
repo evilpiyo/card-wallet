@@ -1,3 +1,4 @@
+/* © 2026 sanfer.chiu. All rights reserved. 授權條款見 LICENSE。 */
 /* ===== Theme token：新增主題時，加一組 [data-theme="名稱"] 覆寫即可 ===== */
 :root {
   --bg: #f6f4ef; --surface: #ffffff; --text: #1d1d1b; --muted: #6f6c65; --line: #e6e2d9;

@@ -1,3 +1,4 @@
+// © 2026 sanfer.chiu. All rights reserved. 授權條款見 LICENSE。
 // ===== 西曆、農曆、節氣、節日（離線查表） =====
 // 瀏覽器內建的農曆在 2027 年春節等日子會差一天，故不用
 const Almanac = (() => {

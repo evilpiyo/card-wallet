@@ -1,3 +1,4 @@
+// © 2026 sanfer.chiu. All rights reserved. 授權條款見 LICENSE。
 // 心情小語的句子資料；挑句邏輯在 index.html
 const QUOTES = {
   common: [
