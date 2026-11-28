@@ -1,8 +1,12 @@
 // 離線使用：安裝時把整個 app 存進手機，之後一律從手機讀取。
 // VERSION 依檔案內容產生：public/ 任何檔案有改，部署前執行 python docs/tools/sw_version.py
-const VERSION = 'card-vault-1fd6bdb81a';
+const VERSION = 'card-vault-1f33d08b7f';
 const FILES = [
   'index.html',
+  'app.css',
+  'card-edge.js',
+  'almanac.js',
+  'quotes.js',
   'manifest.json',
   'icons/icon-180.png',
   'icons/icon-192.png',
