@@ -36,8 +36,26 @@ body { background: var(--bg); color: var(--text); }
 .hero-bg::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62px; --mid: color-mix(in srgb, var(--s-band) 88%, transparent); background: linear-gradient(transparent, var(--mid) 36%, var(--mid) 56%, var(--bg) 96%); }
 .decor-sun { transform: translateY(28px); }
 .decor-top { transform: translateY(52px); }
-.fall { animation: fall 5s ease-in-out infinite alternate; }
-@keyframes fall { to { transform: translate(-6px, 10px); } }
+/* 首頁四季微動態：只動 SVG 內的小元素。--t 週期、--d 錯開、--x/--y 位移、--r 旋轉 */
+.drop, .drift, .bob, .wave, .glow, .branch { transform-box: fill-box; transform-origin: center; }
+.drop { animation: drop calc(var(--t) * 1.5) linear var(--d) infinite; }
+@keyframes drop {
+  0% { transform: translate(0, calc(var(--y) * -.24)) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translate(calc(var(--x) * .6), calc(var(--y) * .06)) rotate(calc(var(--r) * .5)); }
+  85% { opacity: 1; }
+  100% { transform: translate(0, calc(var(--y) * .36)) rotate(var(--r)); opacity: 0; }
+}
+.drift { animation: drift calc(var(--t) * 1.5) ease-in-out infinite alternate; }
+@keyframes drift { to { transform: translateX(calc(var(--x) * .6)); } }
+.bob { transform-origin: 50% 100%; animation: bob 6s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(1.2px) rotate(-1.8deg); } to { transform: translateY(-1.8px) rotate(1.8deg); } }
+.wave { animation: wave 5.4s ease-in-out var(--d) infinite alternate; }
+@keyframes wave { to { transform: translateX(5px); opacity: .3; } }
+.glow { animation: glow 9s ease-in-out infinite alternate; }
+@keyframes glow { to { transform: scale(1.054); } }
+.branch { transform-origin: 100% 0; animation: sway 10.5s ease-in-out infinite alternate; }
+@keyframes sway { to { transform: rotate(-1deg); } }
 .hero-bar, .hero-label, .hero-total { position: relative; }
 .hero-bar { display: flex; align-items: center; gap: 8px; }
 .hero-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 23px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(100deg, var(--t1), var(--t2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -74,7 +92,7 @@ body { background: var(--bg); color: var(--text); }
   .recent li:nth-child(n+3) { display: none; }
   #view-home.hints2 .recent li:nth-child(n+2) { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .fall { animation: none; } .cards button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .drop, .drift, .bob, .wave, .glow, .branch { animation: none; } .cards button { transition: none; } }
 
 /* 面額代表色 */
 .f35 { --tone: #e4602f; --edge: #8a2f0c; } .f50 { --tone: #1e9fd0; --edge: #07557f; } .f100 { --tone: #17a455; --edge: #11602f; } .f200 { --tone: #eeb008; --edge: #7a5200; }
@@ -90,7 +108,9 @@ body { background: var(--bg); color: var(--text); }
 .row { display: flex; align-items: center; gap: 10px; }
 
 /* 卡片管理 */
-.cards-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 4px; }
+.cards-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 0; }
+.back { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; padding: 0; background: none; border: 0; color: var(--text); }
+.back .ic { width: 28px; height: 28px; stroke-width: 2.2; }
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
 .tabs button { flex: 1; padding: 10px; background: none; border: 0; border-bottom: 3px solid transparent; font-weight: 700; color: var(--muted); }
 .tabs button[aria-pressed="true"] { color: var(--text); border-color: var(--action); }
@@ -122,7 +142,8 @@ body { background: var(--bg); color: var(--text); }
 .money-col { flex: 1; min-width: 0; display: flex; justify-content: center; }
 .money { width: 6ch; text-align: left; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .line .wthumb { width: 50px; height: 31px; }
-.pen { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #1d1d1b; font-size: 16px; }
+.pen { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #1d1d1b; }
+.pen .ic { width: 22px; height: 22px; }
 .badge { display: inline-block; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 99px; padding: 0 8px; }
 
 /* 底部面板與提示 */

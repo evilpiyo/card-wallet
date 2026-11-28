@@ -83,7 +83,7 @@
   <!-- 卡片管理 -->
   <section id="view-cards" class="page sub-page" hidden>
     <div class="cards-head">
-      <button type="button" onclick="showPage(cardsFrom)">‹ 返回</button>
+      <button type="button" class="back" onclick="showPage(cardsFrom)" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
       <h2 class="font-bold">卡片管理</h2>
       <span class="w-11"></span>
     </div>
@@ -157,7 +157,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.28・8e65406'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.28・41ec959'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -336,19 +336,24 @@
       const leaf = (x, y, s, a, c) => `<path transform="translate(${x} ${y}) rotate(${a}) scale(${s})" fill="${c}" d="M0-10 3-4 9-6 7 0 11 3 4 4 5 9 1 7 0 13-1 7-5 9-4 4-11 3-7 0-9-6-3-4Z"/>`;
       const pine = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><path fill="#5d7f8e" d="M0-34 12-14H6L16 2H8L18 18H-18L-8 2H-16L-6-14H-12Z"/><path fill="#fff" d="M0-34 7-22 2-24-2-20-7-22Z"/><rect x="-2" y="18" width="4" height="7" fill="#6b5646"/></g>`;
       const decor = {
-        spring: () => `<g class="decor-top"><path d="M368 18C320 30 296 56 262 62M318 40C310 58 296 74 292 92" stroke="#8a5a4a" stroke-width="4" fill="none" stroke-linecap="round"/>${many([[266, 62, 8], [296, 52, 10], [330, 34, 9], [292, 92, 8], [308, 72, 6], [348, 56, 7]], p => flower(...p))}
-          <g class="fall" fill="#ffb3c9">${many([[220, 80], [250, 130], [320, 120], [190, 40], [338, 160]], ([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="2.6" transform="rotate(30 ${x} ${y})"/>`)}</g></g>`,
-        summer: () => `<g fill="#fff"><path class="decor-sun" d="M226 112a14 14 0 0 1 22-14a18 18 0 0 1 34 2a13 13 0 0 1 14 12z"/><path opacity=".8" d="M150 74a9 9 0 0 1 14-8a12 12 0 0 1 22 2a8 8 0 0 1 8 6z"/></g>
-          <path d="M270 190l26-34v34z" fill="#fff"/><path d="M299 190v-30l18 30z" fill="#ff8a6b"/><path d="M262 192h62l-10 10h-42z" fill="#7a5236"/>`,
-        autumn: () => `<g class="fall">${many([[312, 100, 1.4, 20, '#d9542b'], [254, 108, 1, -35, '#e98a24'], [336, 126, 1.1, 60, '#c23c28'], [220, 52, .8, 10, '#e6a82a'], [316, 164, .7, -20, '#d9542b'], [266, 148, .6, 45, '#e98a24']], p => leaf(...p))}</g>`,
+        spring: () => `<g class="decor-top"><g class="branch"><path d="M368 18C320 30 296 56 262 62M318 40C310 58 296 74 292 92" stroke="#8a5a4a" stroke-width="4" fill="none" stroke-linecap="round"/>${many([[266, 62, 8], [296, 52, 10], [330, 34, 9], [292, 92, 8], [308, 72, 6], [348, 56, 7]], p => flower(...p))}</g>
+          ${many([[220, 80, 9, 0, -34], [250, 130, 11, 4, -26], [320, 120, 8, 2, -40], [190, 40, 12, 7, -30], [338, 160, 10, 5, -44], [296, 96, 13, 9, -52], [160, 90, 11, 3, -22]], ([x, y, t, d, dx]) =>
+            `<g class="drop" style="--t:${t}s;--d:-${d}s;--x:${dx}px;--y:70px;--r:220deg"><ellipse cx="${x}" cy="${y}" rx="4" ry="2.6" fill="#ffb3c9"/></g>`)}</g>`,
+        summer: () => `<g class="drift" style="--t:16s;--x:-26px"><path class="decor-sun" fill="#fff" d="M226 112a14 14 0 0 1 22-14a18 18 0 0 1 34 2a13 13 0 0 1 14 12z"/></g>
+          <g class="drift" style="--t:22s;--x:34px"><path fill="#fff" opacity=".8" d="M150 74a9 9 0 0 1 14-8a12 12 0 0 1 22 2a8 8 0 0 1 8 6z"/></g>
+          <g class="bob"><path d="M270 190l26-34v34z" fill="#fff"/><path d="M299 190v-30l18 30z" fill="#ff8a6b"/><path d="M262 192h62l-10 10h-42z" fill="#7a5236"/></g>
+          ${many([[236, 204, 0], [330, 206, 1.4], [196, 212, 2.6]], ([x, y, d]) => `<g class="wave" style="--d:-${d}s"><path d="M${x} ${y}q6-5 12 0t12 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/></g>`)}`,
+        autumn: () => many([[196, 58, 1, 20, '#d9542b', 9, 0, -22], [200, 120, .8, -35, '#e98a24', 11, 3, 14], [188, 178, 1.1, 60, '#c23c28', 8, 5, -30], [214, 46, .8, 10, '#e6a82a', 13, 7, -18], [232, 180, .7, -20, '#d9542b', 10, 2, -18], [156, 152, .6, 45, '#e98a24', 12, 9, 20]], ([x, y, s, a, c, t, d, dx]) =>
+          `<g class="drop" style="--t:${t}s;--d:-${d}s;--x:${dx}px;--y:80px;--r:${dx > 0 ? 160 : -160}deg">${leaf(x, y, s, a, c)}</g>`),
         winter: () => `${pine(300, 170, 1.2)}${pine(334, 182, .9)}${pine(268, 188, .7)}
-          <g class="fall" fill="#fff">${many([[40, 70, 3], [96, 40, 2], [172, 96, 3], [214, 50, 2.4], [250, 112, 3], [288, 78, 2], [340, 104, 3], [140, 150, 2], [62, 168, 2.6], [228, 160, 2]], ([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" stroke="#b9cbe6" stroke-width=".6"/>`)}</g>`
+          ${many([[40, 70, 3, 9, 0], [96, 40, 2, 13, 4], [172, 96, 3, 10, 2], [214, 50, 2.4, 12, 7], [250, 112, 3, 8, 5], [288, 78, 2, 14, 1], [340, 104, 3, 9, 6], [140, 150, 2, 13, 9], [62, 168, 2.6, 11, 3], [228, 160, 2, 12, 8], [190, 30, 2, 15, 11], [320, 46, 2.4, 10, 4]], ([x, y, r, t, d]) =>
+            `<g class="drop" style="--t:${t}s;--d:-${d}s;--x:${r > 2.2 ? 10 : -8}px;--y:90px;--r:0deg"><circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#b9cbe6" stroke-width=".6"/></g>`)}`
       };
       const s = SCENE[season];
       return `<svg viewBox="-30 0 390 232" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
         <defs><linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${s.sky[0]}"/><stop offset="1" stop-color="${s.sky[1]}"/></linearGradient></defs>
         <rect x="-30" width="390" height="254" fill="url(#hero-sky)"/>
-        <circle class="${season === 'autumn' ? '' : 'decor-sun'}" cx="256" cy="${season === 'autumn' ? 150 : 86}" r="22" fill="${s.sun}" opacity=".85"/>
+        <g class="glow"><circle class="decor-sun" cx="256" cy="86" r="22" fill="${s.sun}" opacity=".85"/></g>
         <path d="M-30 176Q-14 192 0 186Q60 156 130 180T260 172T360 166V232H-30Z" fill="${s.far}"/>
         <path d="M-30 206L0 204Q90 180 180 202T360 194V232H-30Z" fill="${s.near}"/>
         ${decor[season]()}</svg>`;
@@ -603,7 +608,7 @@
               `${card.needsCheck ? '<span class="badge">待核對</span>' : ''}
                ${isLocked(card.id) ? '<span class="badge">付款中</span>' : ''}
                ${isComplete(card) ? '' : '<div class="text-xs" style="color:var(--danger)">缺第②段，請刪除後重掃</div>'}`)}
-            <button type="button" class="pen" data-edit="${escapeHTML(card.id)}" aria-label="改餘額">✎</button>
+            <button type="button" class="pen" data-edit="${escapeHTML(card.id)}" aria-label="編輯"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3"/></svg></button>
           </div>
         </div>`).join('') || `<p class="muted text-center py-10">沒有符合的卡片</p>`;
       bindCardRows();
