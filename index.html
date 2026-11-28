@@ -39,11 +39,13 @@
         <div class="hero-date"><span id="date-solar"></span><span id="date-lunar"></span></div>
       </header>
       <div class="cards" id="denominations"></div>
-      <button type="button" class="home-check" id="home-update" onclick="applyUpdate()" hidden>有新版本，點此更新</button>
+      <button type="button" class="home-check home-update" id="home-update" onclick="applyUpdate()" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>有新版本，點此更新</button>
       <button type="button" class="home-check" id="home-pending" onclick="openPay()" hidden>有一筆付款尚未完成</button>
       <button type="button" class="home-check" id="home-check" onclick="openCards()" hidden></button>
       <div class="home-empty" id="home-empty" hidden></div>
+      <div class="gap-quote"></div>
       <button type="button" class="quote" id="quote" onclick="nextQuote()" title="點一下換一句"></button>
+      <div class="gap-recent"></div>
       <section class="recent" id="recent"><h3>最近消費</h3><ul id="recent-list"></ul></section>
     </div>
 
@@ -94,7 +96,7 @@
     <div class="filters" id="filters"></div>
     <div class="list-note">
       <span id="list-summary"></span>
-      <span>← 刪除</span>
+      <span class="swipe-hint" role="img" aria-label="左滑刪除">←<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg></span>
     </div>
     <div class="card-list" id="card-list"></div>
   </section>
@@ -157,7 +159,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.28・41ec959'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.28・82f44d9'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -343,7 +345,8 @@
           <g class="drift" style="--t:22s;--x:34px"><path fill="#fff" opacity=".8" d="M150 74a9 9 0 0 1 14-8a12 12 0 0 1 22 2a8 8 0 0 1 8 6z"/></g>
           <g class="bob"><path d="M270 190l26-34v34z" fill="#fff"/><path d="M299 190v-30l18 30z" fill="#ff8a6b"/><path d="M262 192h62l-10 10h-42z" fill="#7a5236"/></g>
           ${many([[236, 204, 0], [330, 206, 1.4], [196, 212, 2.6]], ([x, y, d]) => `<g class="wave" style="--d:-${d}s"><path d="M${x} ${y}q6-5 12 0t12 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/></g>`)}`,
-        autumn: () => many([[196, 58, 1, 20, '#d9542b', 9, 0, -22], [200, 120, .8, -35, '#e98a24', 11, 3, 14], [188, 178, 1.1, 60, '#c23c28', 8, 5, -30], [214, 46, .8, 10, '#e6a82a', 13, 7, -18], [232, 180, .7, -20, '#d9542b', 10, 2, -18], [156, 152, .6, 45, '#e98a24', 12, 9, 20]], ([x, y, s, a, c, t, d, dx]) =>
+        // 太陽左右各 3 片；左右飄移範圍不得碰到太陽
+        autumn: () => many([[196, 56, 1, 20, '#d9542b', 9, 0, -22], [164, 118, .7, -35, '#e98a24', 12, 9, 20], [192, 176, 1.1, 60, '#c23c28', 8, 5, -30], [318, 94, .8, 10, '#e6a82a', 13, 7, 18], [340, 140, 1, -20, '#d9542b', 11, 3, -18], [306, 182, .85, 45, '#e98a24', 10, 2, 20]], ([x, y, s, a, c, t, d, dx]) =>
           `<g class="drop" style="--t:${t}s;--d:-${d}s;--x:${dx}px;--y:80px;--r:${dx > 0 ? 160 : -160}deg">${leaf(x, y, s, a, c)}</g>`),
         winter: () => `${pine(300, 170, 1.2)}${pine(334, 182, .9)}${pine(268, 188, .7)}
           ${many([[40, 70, 3, 9, 0], [96, 40, 2, 13, 4], [172, 96, 3, 10, 2], [214, 50, 2.4, 12, 7], [250, 112, 3, 8, 5], [288, 78, 2, 14, 1], [340, 104, 3, 9, 6], [140, 150, 2, 13, 9], [62, 168, 2.6, 11, 3], [228, 160, 2, 12, 8], [190, 30, 2, 15, 11], [320, 46, 2.4, 10, 4]], ([x, y, r, t, d]) =>
@@ -602,7 +605,7 @@
 
       $('card-list').innerHTML = rows.map(card => `
         <div class="item ${faceClass(card.initialAmount)} ${isUsed(card) ? 'used' : ''}">
-          <button type="button" class="del" data-del="${escapeHTML(card.id)}">刪除</button>
+          <button type="button" class="del" data-del="${escapeHTML(card.id)}" aria-label="刪除"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg></button>
           <div class="face" data-id="${escapeHTML(card.id)}" role="button" tabindex="0" aria-label="查看卡片">
             ${cardLine(card, maskedNo(card.barcode),
               `${card.needsCheck ? '<span class="badge">待核對</span>' : ''}
