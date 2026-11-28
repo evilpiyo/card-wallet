@@ -159,7 +159,7 @@
   <div id="view-pay" class="payview" hidden></div>
 
   <script>
-    const APP_VERSION = '2026.11.28・695cddf'; // 由 docs/tools/sw_version.py 寫入
+    const APP_VERSION = '2026.11.28・6e33ad6'; // 由 docs/tools/sw_version.py 寫入
     const DB_NAME = '711CardVaultDB';
     const STORE_NAME = 'cards';
     const PAY_STORE = 'payment'; // 未完成的付款，只有一筆 current
@@ -1919,17 +1919,22 @@
       const plan = need > 0 ? allocate(allCards, need) : null;
       const ready = Boolean(plan && !plan.short);
       const hint = !bill ? '輸入這次應付金額' : need < 0 ? '其他付款超過應付金額' : need === 0 ? '不需要使用商品卡'
-        : plan.short ? `商品卡還差 <b class="amt">${money(plan.short)}</b>，請增加其他付款`
+        : plan.short ? '商品卡餘額不足'
         : `商品卡支付 <br><b class="amt">${money(need)}</b>・<span class="nobreak">用 <b class="amt">${plan.items.length}</b> 張</span>`;
       const box = (key, label, value, size) => `<button type="button" class="amount-box" data-box="${key}" aria-pressed="${pay.typing === key}">
         <span>${label}</span><b style="font-size:${size}px">${Number(value) ? money(value) : `<i>${key === 'bill' || pay.typing === key ? '$' : '無'}</i>`}</b></button>`;
+      // 其他付款：有金額或正在輸入才顯示那一列；餘額不足時改用「差額」按鈕帶入
+      const showOther = other > 0 || pay.typing === 'other';
+      const otherRow = showOther ? box('other', '其他付款（現金等）', pay.other, 22)
+        : plan?.short ? '' : '<button type="button" class="link other-add" data-act="other">＋其他付款</button>';
+      const fill = plan?.short ? `<button type="button" class="chip fill-other" data-act="fill">差額 ${money(plan.short)} 用其他付款</button>` : '';
       // 疊卡最多畫 5 張，張數另有文字
       const hand = ready ? plan.items.slice(0, 5).map(i => wideCard(payCard(i).initialAmount)).join('') : '';
       $('view-pay').innerHTML = `${payTop(payClose('exit', '返回首頁'), '付款', PAY_GAP)}
         <div class="pay-slip"><div class="tear edge"></div>
-          ${box('bill', '應付金額', pay.bill, 46)}${box('other', '其他付款（現金等）', pay.other, 22)}
+          ${box('bill', '應付金額', pay.bill, 46)}${otherRow}
           <div class="tear"></div>
-          <div class="pay-plan"><p class="pay-hintline ${plan?.short || need < 0 ? 'short' : ''}" id="amount-hint">${hint}</p><div class="hand">${hand}</div></div>
+          <div class="pay-plan"><p class="pay-hintline ${plan?.short || need < 0 ? 'short' : ''}" id="amount-hint">${hint}</p>${fill}<div class="hand">${hand}</div></div>
           <div style="margin-top:auto">${keypad()}</div>
         </div>
         <div class="pay-foot"><button type="button" class="btn btn-primary w-full" data-act="start" ${ready ? '' : 'disabled'}>開始付款</button></div>`;
@@ -1937,6 +1942,12 @@
       view.querySelector('[data-act="exit"]').onclick = closePay;
       view.querySelectorAll('[data-box]').forEach(btn => btn.onclick = () => { pay.typing = btn.dataset.box; renderAmount(); });
       view.querySelector('[data-act="start"]').onclick = beginPay;
+      view.querySelector('[data-act="other"]')?.addEventListener('click', () => { pay.typing = 'other'; renderAmount(); });
+      view.querySelector('[data-act="fill"]')?.addEventListener('click', () => {
+        pay.other = String(other + plan.short);
+        pay.typing = 'bill';
+        renderAmount();
+      });
       bindKeys(key => {
         const old = pay[pay.typing];
         const next = key === '⌫' ? old.slice(0, -1) : key === '清除' ? '' : (old + key).replace(/^0+(?=\d)/, '').slice(0, 5);
