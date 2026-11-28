@@ -1,7 +1,7 @@
 // © 2026 sanfer.chiu. All rights reserved. 授權條款見 LICENSE。
 // 離線使用：安裝時把整個 app 存進手機，之後一律從手機讀取。
 // VERSION 依檔案內容產生：public/ 任何檔案有改，部署前執行 python docs/tools/sw_version.py
-const VERSION = 'card-vault-ade99092f5';
+const VERSION = 'card-vault-efc4a886fa';
 const FILES = [
   'index.html',
   'app.css',
